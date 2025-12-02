@@ -109,6 +109,7 @@ export const loans = mysqlTable("loans", {
   remainingTermYears: int("remainingTermYears").notNull(),
   remainingIOPeriodYears: int("remainingIOPeriodYears").default(0).notNull(),
   repaymentFrequency: mysqlEnum("repaymentFrequency", ["Monthly", "Fortnightly", "Weekly"]).default("Monthly").notNull(),
+  offsetBalance: int("offsetBalance").default(0).notNull(), // in cents - offset account balance
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -227,3 +228,48 @@ export const portfolioGoals = mysqlTable("portfolio_goals", {
 
 export type PortfolioGoal = typeof portfolioGoals.$inferSelect;
 export type InsertPortfolioGoal = typeof portfolioGoals.$inferInsert;
+
+/**
+ * Extra repayments - tracks recurring extra payments on loans
+ */
+export const extraRepayments = mysqlTable("extra_repayments", {
+  id: int("id").autoincrement().primaryKey(),
+  loanId: int("loanId").notNull(),
+  amount: int("amount").notNull(), // in cents
+  frequency: mysqlEnum("frequency", ["Monthly", "Fortnightly", "Weekly", "Annually"]).notNull(),
+  startDate: datetime("startDate").notNull(),
+  endDate: datetime("endDate"), // null for full term
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExtraRepayment = typeof extraRepayments.$inferSelect;
+export type InsertExtraRepayment = typeof extraRepayments.$inferInsert;
+
+/**
+ * Lump sum payments - tracks one-time extra payments on loans
+ */
+export const lumpSumPayments = mysqlTable("lump_sum_payments", {
+  id: int("id").autoincrement().primaryKey(),
+  loanId: int("loanId").notNull(),
+  amount: int("amount").notNull(), // in cents
+  paymentDate: datetime("paymentDate").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LumpSumPayment = typeof lumpSumPayments.$inferSelect;
+export type InsertLumpSumPayment = typeof lumpSumPayments.$inferInsert;
+
+/**
+ * Interest rate forecasts - stores variable interest rate projections
+ */
+export const interestRateForecasts = mysqlTable("interest_rate_forecasts", {
+  id: int("id").autoincrement().primaryKey(),
+  loanId: int("loanId").notNull(),
+  startYear: int("startYear").notNull(),
+  endYear: int("endYear"), // null for forever
+  forecastRate: int("forecastRate").notNull(), // in basis points
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InterestRateForecast = typeof interestRateForecasts.$inferSelect;
+export type InsertInterestRateForecast = typeof interestRateForecasts.$inferInsert;

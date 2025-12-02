@@ -201,3 +201,22 @@
 - [ ] Populate Property 3 with realistic placeholder data (deferred - test properties)
 - [x] Populate Brisbane property with complete financial data
 - [x] Test property detail page displays all information correctly
+
+
+## Mortgage Monster-Style Interactive Loan Calculator
+
+- [x] Research Mortgage Monster website features and interaction patterns
+- [x] Update loans schema to support offset account balance
+- [x] Add extra repayments table to schema
+- [x] Create loan calculation engine for repayment projections
+- [x] Build interactive slider component for loan parameters
+- [x] Create stacked area chart for repayment breakdown (principal, interest, total)
+- [x] Create stacked area chart for property value vs equity
+- [x] Add interest rate forecast controls (near term and long term)
+- [x] Add property growth forecast controls (near term and long term)
+- [x] Implement offset account section with balance input
+- [x] Implement extra repayments section (one-time and recurring)
+- [x] Add lump sum payment calculator
+- [x] Integrate calculator into property detail page
+- [x] Test all slider interactions and chart updates
+- [x] Verify calculations match expected loan amortization (offset reduces interest correctly)

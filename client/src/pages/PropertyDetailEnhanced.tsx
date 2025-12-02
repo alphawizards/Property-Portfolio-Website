@@ -10,6 +10,7 @@ import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
+import { LoanCalculator } from "@/components/LoanCalculator";
 
 export default function PropertyDetailEnhanced() {
   const params = useParams();
@@ -94,6 +95,12 @@ export default function PropertyDetailEnhanced() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline">Edit Property</Button>
+              <Button variant="outline" onClick={() => {
+                // Scroll to calculator section
+                document.getElementById('loan-calculator')?.scrollIntoView({ behavior: 'smooth' });
+              }}>
+                Loan Calculator
+              </Button>
               <Button variant="outline" onClick={() => setLocation(`/properties/${propertyId}/analysis`)}>
                 View Analysis
               </Button>
@@ -397,6 +404,22 @@ export default function PropertyDetailEnhanced() {
             </CardContent>
           </Card>
         </div>
+      </div>
+      
+      {/* Loan Calculator Section */}
+      <div id="loan-calculator" className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold mb-2">Mortgage Calculator</h2>
+          <p className="text-gray-600">Interactive loan calculator with projections and scenario analysis</p>
+        </div>
+        <LoanCalculator
+          propertyId={propertyId}
+          initialPropertyValue={currentValue}
+          initialLoanAmount={totalDebt}
+          initialDeposit={currentValue - totalDebt}
+          initialInterestRate={loans?.[0]?.interestRate || 600}
+          initialTerm={loans?.[0]?.remainingTermYears || 25}
+        />
       </div>
     </div>
   );
