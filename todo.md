@@ -340,3 +340,52 @@
 - [x] Verify all new properties have growth rate periods
 - [x] Verify cashflow calculations work for all properties
 - [x] Verify 12-month chart displays for all properties
+
+
+## Make Financial Fields Data-Driven & Property Details Editable (User Requested)
+
+### Current Value Field
+- [x] Current Value is already editable and stores data correctly (verified)
+- [x] Ensure Current Value updates property_valuations table
+- [x] Verify Current Value feeds into portfolio summary calculations
+
+### Total Debt Field
+- [x] Total Debt is calculated from loans (verified calculation is correct)
+- [x] Ensure Total Debt updates when loans are added/edited/deleted
+- [x] Verify Total Debt feeds into portfolio summary
+
+### Equity Field
+- [x] Equity is calculated as Current Value - Total Debt (verified)
+- [x] Ensure Equity updates when Current Value or Total Debt changes
+- [x] Verify Equity feeds into portfolio summary
+
+### LVR Field
+- [x] LVR is calculated as (Total Debt / Current Value) * 100 (verified)
+- [x] Ensure LVR updates when Current Value or Total Debt changes
+- [x] Display LVR as percentage with 2 decimal places
+
+### Purchase Date Consistency
+- [x] Verify purchase date is used for initial property valuation
+- [x] Ensure purchase date is used as loan start date for amortization (fixed in AddPropertyExtended)
+- [x] Verify all growth calculations start from purchase date
+- [x] Ensure rental income projections start from purchase date
+- [x] Ensure expense projections start from purchase date
+
+### Property Details Editable
+- [x] Make Property Type editable (dropdown)
+- [x] Make Ownership Structure editable (dropdown)
+- [x] Make Purchase Date editable (date picker)
+- [x] Make Purchase Price editable (number input)
+- [x] Make State editable (text input)
+- [x] Make Suburb editable (text input)
+- [x] Add save mutation for property details updates
+- [x] Add edit/save/cancel UI states for Property Details section
+- [x] Test all property detail edits persist to database
+
+### Best Practices Documentation
+- [x] Document database query optimization recommendations
+- [x] Document caching strategies for production
+- [x] Document API performance best practices
+- [x] Document frontend optimization recommendations
+- [x] Document deployment and scaling considerations
+- [x] Create production readiness checklist

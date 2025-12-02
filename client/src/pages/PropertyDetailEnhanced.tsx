@@ -30,6 +30,24 @@ export default function PropertyDetailEnhanced() {
   const [openExpenseLog, setOpenExpenseLog] = useState<number | null>(null);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [editedValue, setEditedValue] = useState(0);
+  
+  // Property details editing state
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [editedDetails, setEditedDetails] = useState<{
+    propertyType: 'Residential' | 'Commercial' | 'Industrial' | 'Land';
+    ownershipStructure: 'Trust' | 'Individual' | 'Company' | 'Partnership';
+    purchaseDate: Date;
+    purchasePrice: number;
+    state: string;
+    suburb: string;
+  }>({
+    propertyType: 'Residential',
+    ownershipStructure: 'Individual',
+    purchaseDate: new Date(),
+    purchasePrice: 0,
+    state: '',
+    suburb: '',
+  });
   const [editedWeeklyRent, setEditedWeeklyRent] = useState(0);
   const [editedRentGrowth, setEditedRentGrowth] = useState(0);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -52,15 +70,18 @@ export default function PropertyDetailEnhanced() {
       utils.rentalIncome.getByProperty.invalidate({ propertyId });
     },
     onError: (error: any) => {
-      toast.error(`Failed to update rental: ${error.message}`);
+      toast.error(`Failed to update: ${error.message}`);
     },
   });
-
+  
   const updatePropertyMutation = trpc.properties.update.useMutation({
     onSuccess: () => {
-      toast.success("Property name updated");
       utils.properties.getById.invalidate({ id: propertyId });
+      utils.properties.list.invalidate();
+      utils.properties.listWithFinancials.invalidate();
+      setIsEditingDetails(false);
       setIsEditingName(false);
+      toast.success("Property updated");
     },
     onError: (error: any) => {
       toast.error(`Failed to update property: ${error.message}`);
@@ -209,36 +230,175 @@ export default function PropertyDetailEnhanced() {
         <div className="grid gap-6">
           {/* Property Details */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Property Details</CardTitle>
+              {!isEditingDetails && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditedDetails({
+                      propertyType: property.propertyType,
+                      ownershipStructure: property.ownershipStructure,
+                      purchaseDate: new Date(property.purchaseDate),
+                      purchasePrice: property.purchasePrice,
+                      state: property.state,
+                      suburb: property.suburb,
+                    });
+                    setIsEditingDetails(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm text-gray-600">Property Type</Label>
-                  <p className="font-medium">{property.propertyType}</p>
+              {isEditingDetails ? (
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Property Type</Label>
+                      <Select
+                        value={editedDetails.propertyType}
+                        onValueChange={(value) =>
+                          setEditedDetails({ ...editedDetails, propertyType: value as 'Residential' | 'Commercial' | 'Industrial' | 'Land' })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Residential">Residential</SelectItem>
+                          <SelectItem value="Commercial">Commercial</SelectItem>
+                          <SelectItem value="Industrial">Industrial</SelectItem>
+                          <SelectItem value="Land">Land</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Ownership Structure</Label>
+                      <Select
+                        value={editedDetails.ownershipStructure}
+                        onValueChange={(value) =>
+                          setEditedDetails({ ...editedDetails, ownershipStructure: value as 'Trust' | 'Individual' | 'Company' | 'Partnership' })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Individual">Individual</SelectItem>
+                          <SelectItem value="Trust">Trust</SelectItem>
+                          <SelectItem value="Company">Company</SelectItem>
+                          <SelectItem value="Partnership">Partnership</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Purchase Date</Label>
+                      <Input
+                        type="date"
+                        value={editedDetails.purchaseDate.toISOString().split('T')[0]}
+                        onChange={(e) =>
+                          setEditedDetails({
+                            ...editedDetails,
+                            purchaseDate: new Date(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Purchase Price</Label>
+                      <Input
+                        type="number"
+                        value={editedDetails.purchasePrice / 100}
+                        onChange={(e) =>
+                          setEditedDetails({
+                            ...editedDetails,
+                            purchasePrice: Math.round(parseFloat(e.target.value) * 100),
+                          })
+                        }
+                        step="1000"
+                      />
+                    </div>
+                    <div>
+                      <Label>State</Label>
+                      <Input
+                        type="text"
+                        value={editedDetails.state}
+                        onChange={(e) =>
+                          setEditedDetails({ ...editedDetails, state: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Suburb</Label>
+                      <Input
+                        type="text"
+                        value={editedDetails.suburb}
+                        onChange={(e) =>
+                          setEditedDetails({ ...editedDetails, suburb: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        updatePropertyMutation.mutate({
+                          id: propertyId,
+                          data: {
+                            propertyType: editedDetails.propertyType,
+                            ownershipStructure: editedDetails.ownershipStructure,
+                            purchaseDate: editedDetails.purchaseDate,
+                            purchasePrice: editedDetails.purchasePrice,
+                            state: editedDetails.state,
+                            suburb: editedDetails.suburb,
+                          },
+                        });
+                      }}
+                      disabled={updatePropertyMutation.isPending}
+                    >
+                      {updatePropertyMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsEditingDetails(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm text-gray-600">Ownership Structure</Label>
-                  <p className="font-medium">{property.ownershipStructure}</p>
+              ) : (
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-600">Property Type</Label>
+                    <p className="font-medium">{property.propertyType}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Ownership Structure</Label>
+                    <p className="font-medium">{property.ownershipStructure}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Purchase Date</Label>
+                    <p className="font-medium">{new Date(property.purchaseDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Purchase Price</Label>
+                    <p className="font-medium">{formatCurrency(property.purchasePrice)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">State</Label>
+                    <p className="font-medium">{property.state}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Suburb</Label>
+                    <p className="font-medium">{property.suburb}</p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm text-gray-600">Purchase Date</Label>
-                  <p className="font-medium">{new Date(property.purchaseDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">Purchase Price</Label>
-                  <p className="font-medium">{formatCurrency(property.purchasePrice)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">State</Label>
-                  <p className="font-medium">{property.state}</p>
-                </div>
-                <div>
-                  <Label className="text-sm text-gray-600">Suburb</Label>
-                  <p className="font-medium">{property.suburb}</p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

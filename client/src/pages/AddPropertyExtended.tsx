@@ -374,7 +374,7 @@ export default function AddPropertyExtended() {
       equityLoans: [
         ...formData.equityLoans,
         {
-          loanStartDate: new Date(),
+          loanStartDate: formData.purchaseDate,
           lenderName: "",
           loanType: "Interest Only",
           loanPurpose: "",
@@ -852,7 +852,7 @@ export default function AddPropertyExtended() {
                   updateFormData({
                     mainLoan: {
                       ...(formData.mainLoan || {
-                        loanStartDate: new Date(),
+                        loanStartDate: formData.purchaseDate,
                         lenderName: "",
                         loanType: "Interest Only",
                         loanPurpose: "Property Purchase",
@@ -877,7 +877,7 @@ export default function AddPropertyExtended() {
                   updateFormData({
                     mainLoan: {
                       ...(formData.mainLoan || {
-                        loanStartDate: new Date(),
+                        loanStartDate: formData.purchaseDate,
                         lenderName: "",
                         loanType: "Interest Only",
                         loanPurpose: "Property Purchase",
@@ -901,7 +901,7 @@ export default function AddPropertyExtended() {
                   updateFormData({
                     mainLoan: {
                       ...(formData.mainLoan || {
-                        loanStartDate: new Date(),
+                        loanStartDate: formData.purchaseDate,
                         lenderName: "",
                         loanType: "Interest Only",
                         loanPurpose: "Property Purchase",
@@ -924,7 +924,7 @@ export default function AddPropertyExtended() {
                   updateFormData({
                     mainLoan: {
                       ...(formData.mainLoan || {
-                        loanStartDate: new Date(),
+                        loanStartDate: formData.purchaseDate,
                         lenderName: "",
                         loanType: "Interest Only",
                         loanPurpose: "Property Purchase",
