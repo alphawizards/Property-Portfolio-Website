@@ -508,3 +508,27 @@
 - [x] Add confirmation dialog before deletion
 - [x] Redirect to home page after successful deletion
 - [x] Test property deletion with various data scenarios
+
+
+## Portfolio List Enhancements (User Requested)
+
+### Delete Property from List
+- [x] Add delete button/icon to each property card in the list
+- [x] Add confirmation dialog before deletion
+- [x] Use existing properties.delete procedure
+- [x] Refresh property list after successful deletion
+- [x] Test delete functionality from portfolio page
+
+### Purchase Date Column
+- [x] Add "Purchase Date" column to property list table
+- [x] Format date as MM/DD/YYYY or user-friendly format
+- [x] Ensure column is responsive on mobile devices
+- [ ] Sort properties by purchase date (optional)
+
+### Purchase Date Markers on Chart
+- [x] Add visual markers (icons/dots) on portfolio equity chart at purchase dates
+- [x] Show property name on hover over marker
+- [x] Position markers at the correct X-axis date
+- [x] Use distinct icon (e.g., house icon, pin, or dot)
+- [ ] Ensure markers don't overlap if properties purchased on same date
+- [x] Test with multiple properties across different years

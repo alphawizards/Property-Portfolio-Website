@@ -4,15 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, DollarSign, TrendingUp, Target, Plus } from "lucide-react";
+import { Building2, DollarSign, TrendingUp, Target, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceDot } from "recharts";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
+  const utils = trpc.useUtils();
+  
+  const deletePropertyMutation = trpc.properties.delete.useMutation({
+    onSuccess: () => {
+      utils.properties.listWithFinancials.invalidate();
+      utils.calculations.portfolioProjections.invalidate();
+    },
+  });
+  
+  const handleDelete = (e: React.MouseEvent, propertyId: number, propertyName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm(`Are you sure you want to delete "${propertyName}"? This action cannot be undone.`)) {
+      deletePropertyMutation.mutate({ id: propertyId });
+    }
+  };
 
   const currentYear = new Date().getFullYear();
 
@@ -198,6 +214,27 @@ export default function Dashboard() {
                       <Area type="monotone" dataKey="Portfolio Value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeDasharray="5 5" />
                       <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeDasharray="5 5" />
                       <Area type="monotone" dataKey="Portfolio Equity" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                      {/* Purchase date markers */}
+                      {properties?.map((property) => {
+                        const purchaseYear = new Date(property.purchaseDate).getFullYear();
+                        const chartYear = `FY ${purchaseYear.toString().slice(-2)}`;
+                        const dataPoint = chartData.find(d => d.year === chartYear);
+                        if (dataPoint) {
+                          return (
+                            <ReferenceDot
+                              key={property.id}
+                              x={chartYear}
+                              y={dataPoint["Portfolio Equity"]}
+                              r={8}
+                              fill="#f59e0b"
+                              stroke="#ffffff"
+                              strokeWidth={2}
+                              label={{ value: "🏠", position: "top", fontSize: 16 }}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
                     </AreaChart>
                   ) : viewMode === "cashflow" ? (
                     <LineChart data={chartData}>
@@ -258,22 +295,36 @@ export default function Dashboard() {
                           <p className="text-sm text-gray-500">{property.address}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="flex gap-6">
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Value</p>
-                            <p className="font-semibold text-gray-900">{formatCurrency(property.currentValue)}</p>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <div className="flex gap-6">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Value</p>
+                              <p className="font-semibold text-gray-900">{formatCurrency(property.currentValue)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Debt</p>
+                              <p className="font-semibold text-red-600">{formatCurrency(property.totalDebt)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Equity</p>
+                              <p className="font-semibold text-green-600">{formatCurrency(property.equity)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Purchase Date</p>
+                              <p className="font-semibold text-gray-700">{new Date(property.purchaseDate).toLocaleDateString()}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Debt</p>
-                            <p className="font-semibold text-red-600">{formatCurrency(property.totalDebt)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 mb-1">Equity</p>
-                            <p className="font-semibold text-green-600">{formatCurrency(property.equity)}</p>
-                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{property.status}</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{property.status}</p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={(e) => handleDelete(e, property.id, property.nickname)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
                   </Link>
