@@ -6,6 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, DollarSign, TrendingUp, Target, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Link } from "wouter";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceDot } from "recharts";
 
@@ -13,20 +23,29 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const utils = trpc.useUtils();
   
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
       utils.properties.listWithFinancials.invalidate();
       utils.calculations.portfolioProjections.invalidate();
+      setDeleteDialogOpen(false);
+      setPropertyToDelete(null);
     },
   });
   
-  const handleDelete = (e: React.MouseEvent, propertyId: number, propertyName: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, propertyId: number, propertyName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm(`Are you sure you want to delete "${propertyName}"? This action cannot be undone.`)) {
-      deletePropertyMutation.mutate({ id: propertyId });
+    setPropertyToDelete({ id: propertyId, name: propertyName });
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = () => {
+    if (propertyToDelete) {
+      deletePropertyMutation.mutate({ id: propertyToDelete.id });
     }
   };
 
@@ -321,7 +340,7 @@ export default function Dashboard() {
                           variant="ghost"
                           size="icon"
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={(e) => handleDelete(e, property.id, property.nickname)}
+                          onClick={(e) => handleDeleteClick(e, property.id, property.nickname)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -334,6 +353,28 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{propertyToDelete?.name}"? This action cannot be undone.
+              All associated data including loans, rental income, and expense logs will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

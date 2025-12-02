@@ -532,3 +532,16 @@
 - [x] Use distinct icon (e.g., house icon, pin, or dot)
 - [ ] Ensure markers don't overlap if properties purchased on same date
 - [x] Test with multiple properties across different years
+
+
+## Delete Button Functionality Testing (User Reported Issue)
+
+- [x] Test delete button on property card in dashboard
+- [x] Verify confirmation dialog appears when delete button is clicked
+- [x] Verify property is actually deleted from database when confirmed
+- [x] Verify property list refreshes after deletion
+- [x] Check if delete mutation is properly wired to the button
+- [x] Fix any issues with delete functionality
+- [x] Replace native browser confirm() with styled AlertDialog component
+- [x] Test deletion reduces portfolio count from 4 to 3 properties
+- [x] Verify portfolio values update correctly after deletion
