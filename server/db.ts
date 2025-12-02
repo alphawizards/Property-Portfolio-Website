@@ -415,6 +415,13 @@ export async function getExpenseLogById(expenseId: number) {
   return results[0] || null;
 }
 
+export async function updateExpenseLog(expenseId: number, data: Partial<InsertExpenseLog>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(expenseLogs).set(data).where(eq(expenseLogs.id, expenseId));
+}
+
 export async function deleteExpenseBreakdownByLogId(expenseLogId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

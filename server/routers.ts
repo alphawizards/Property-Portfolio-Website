@@ -532,6 +532,12 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
+        // Calculate total amount from breakdown
+        const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
+        
+        // Update expense log with new total amount
+        await db.updateExpenseLog(input.id, { totalAmount });
+        
         // Delete existing breakdown items
         await db.deleteExpenseBreakdownByLogId(input.id);
         // Add new breakdown items

@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 interface ExpenseCategory {
   category: string;
   amount: number;
-  frequency: string;
 }
 
 interface ExpenseLogEditorProps {
@@ -45,18 +44,17 @@ export function ExpenseLogEditor({ expenseLogId, propertyId, initialBreakdown, o
       expenseMap[category] = {
         category,
         amount: existing ? existing.amount / 100 : 0, // Convert cents to dollars
-        frequency: existing?.frequency || 'Annually'
       };
     });
     setExpenses(expenseMap);
   }, [initialBreakdown]);
 
-  const updateExpense = (category: string, field: 'amount' | 'frequency', value: string | number) => {
+  const updateExpense = (category: string, value: string) => {
     setExpenses(prev => ({
       ...prev,
       [category]: {
         ...prev[category],
-        [field]: field === 'amount' ? parseFloat(value as string) || 0 : value
+        amount: parseFloat(value) || 0
       }
     }));
   };
@@ -84,7 +82,6 @@ export function ExpenseLogEditor({ expenseLogId, propertyId, initialBreakdown, o
       .map(exp => ({
         category: exp.category,
         amount: Math.round(exp.amount * 100), // Convert dollars to cents
-        frequency: exp.frequency
       }));
 
     updateExpenseMutation.mutate({
@@ -112,30 +109,13 @@ export function ExpenseLogEditor({ expenseLogId, propertyId, initialBreakdown, o
             </div>
             <div className="flex gap-4 flex-1">
               <div className="flex-1">
-                <Label className="text-xs">Amount</Label>
+                <Label className="text-xs">Amount (Annual)</Label>
                 <Input
                   type="number"
                   placeholder="0"
                   value={expenses[category]?.amount || ''}
-                  onChange={(e) => updateExpense(category, 'amount', e.target.value)}
+                  onChange={(e) => updateExpense(category, e.target.value)}
                 />
-              </div>
-              <div className="flex-1">
-                <Label className="text-xs">Frequency</Label>
-                <Select
-                  value={expenses[category]?.frequency || 'Annually'}
-                  onValueChange={(value) => updateExpense(category, 'frequency', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Weekly">Weekly</SelectItem>
-                    <SelectItem value="Monthly">Monthly</SelectItem>
-                    <SelectItem value="Quarterly">Quarterly</SelectItem>
-                    <SelectItem value="Annually">Annually</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </div>

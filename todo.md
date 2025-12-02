@@ -312,3 +312,31 @@
 - [x] Update property list cards to show Equity
 - [x] Ensure financial metrics are calculated correctly for each property
 - [x] Test property list displays all financial information
+
+
+## Standardize Property Functionality (User Requested)
+
+### Expense Log Save Functionality
+- [x] Wire "Save & Continue" button in ExpenseLogForm to save expense breakdown
+- [x] Ensure expense breakdown data persists to database
+- [x] Update weekly expenses calculation when expense log is saved
+- [x] Update net weekly cashflow summary when expenses change
+- [x] Test expense log save on Brisbane Investment property
+- [x] Test expense log save on new properties
+
+### Auto-Create Default Data for New Properties
+- [x] Modify property creation wizard to auto-create expense log with default categories
+- [x] Auto-create rental income record with $0 default (wizard already does this)
+- [x] Auto-create property valuation record with purchase price (wizard already does this)
+- [x] Auto-create growth rate period with 7% default growth (wizard already does this)
+- [x] Ensure all new properties have complete data records
+- [x] Test new property creation includes all default data
+- [x] Verify PropertyDetailEnhanced page displays correctly for new properties
+
+### Data Verification
+- [x] Verify all new properties have expense logs with 9 default categories
+- [x] Verify all new properties have rental income records
+- [x] Verify all new properties have valuation records
+- [x] Verify all new properties have growth rate periods
+- [x] Verify cashflow calculations work for all properties
+- [x] Verify 12-month chart displays for all properties

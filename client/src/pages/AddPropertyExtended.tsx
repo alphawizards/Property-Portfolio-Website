@@ -291,7 +291,19 @@ export default function AddPropertyExtended() {
         });
       }
 
-      // Add expenses
+      // Add expenses with default breakdown categories
+      const defaultCategories = [
+        'Repairs & Maintenance',
+        'Marketing & Advertising',
+        'Building Insurance',
+        'Landlord Insurance',
+        'Council Rates',
+        'Water Rates',
+        'Strata Fees',
+        'Land Tax',
+        'Property Management Fees'
+      ];
+      
       await addExpenseMutation.mutateAsync({
         propertyId,
         expense: {
@@ -300,6 +312,10 @@ export default function AddPropertyExtended() {
           frequency: "Monthly" as const,
           growthRate: Math.round(formData.expenses.growthRate * 100),
         },
+        breakdown: defaultCategories.map(category => ({
+          category,
+          amount: 0, // Default to $0
+        })),
       });
 
       // Add depreciation
