@@ -61,6 +61,12 @@ export default function Dashboard() {
                 Add Property
               </Button>
             </Link>
+            <Link href="/comparison">
+              <Button variant="outline">Compare Investments</Button>
+            </Link>
+            <Link href="/subscription">
+              <Button variant="outline">Subscription</Button>
+            </Link>
             <Button variant="outline">Members</Button>
           </div>
         </div>

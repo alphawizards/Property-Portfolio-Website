@@ -107,3 +107,46 @@
 - [ ] Add tax calculation features
 - [ ] Create mobile app versions
 - [ ] Add collaborative portfolio sharing
+
+
+## Follow-up Enhancements
+
+### Complete Property Form (Steps 4-10)
+
+- [x] Implement Step 4: Equity Loans form with multiple loan support
+- [x] Implement Step 5: Main Principal Loan form
+- [x] Implement Step 6: Property Value & Growth Projections form
+- [x] Implement Step 7: Rental Income form with growth rates
+- [x] Implement Step 8: Expenses form with breakdown
+- [x] Implement Step 9: Depreciation Schedule form
+- [x] Implement Step 10: Capital Expenditure form
+- [x] Update AddProperty component to include all 10 steps
+- [x] Add form data persistence across all steps
+- [x] Implement comprehensive form validation
+
+### Investment Comparison Feature
+
+- [x] Create comparison page/section in dashboard
+- [x] Implement share investment calculation logic
+- [x] Create side-by-side comparison charts
+- [x] Add ROI comparison metrics
+- [x] Implement scenario testing (what-if analysis)
+- [ ] Add export/print comparison report (deferred)
+
+### Subscription & Monetization
+
+- [x] Add Stripe feature to project using webdev_add_feature
+- [x] Define free tier features (limited properties, basic projections)
+- [x] Define premium tier features (unlimited properties, advanced analytics)
+- [x] Create subscription management UI
+- [ ] Implement feature gating based on subscription tier (deferred)
+- [ ] Add billing and payment history page (deferred)
+- [x] Create upgrade/downgrade flows
+
+
+## Testing Completed
+
+- [x] Write unit tests for property CRUD operations
+- [x] Write unit tests for financial calculations
+- [x] Write unit tests for subscription functionality
+- [x] Run all tests and ensure they pass (6/6 tests passing)

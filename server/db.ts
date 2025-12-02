@@ -523,3 +523,65 @@ export async function getUserPortfolioData(userId: number) {
     goal,
   };
 }
+
+
+// ============ SUBSCRIPTION OPERATIONS ============
+
+export async function updateUserSubscription(
+  userId: number,
+  data: {
+    subscriptionTier?: "FREE" | "PREMIUM_MONTHLY" | "PREMIUM_ANNUAL";
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    subscriptionStatus?: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | null;
+    subscriptionEndDate?: Date | null;
+  }
+) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update user subscription: database not available");
+    return;
+  }
+
+  const updateData: any = {};
+  if (data.subscriptionTier !== undefined) updateData.subscriptionTier = data.subscriptionTier;
+  if (data.stripeCustomerId !== undefined) updateData.stripeCustomerId = data.stripeCustomerId;
+  if (data.stripeSubscriptionId !== undefined) updateData.stripeSubscriptionId = data.stripeSubscriptionId;
+  if (data.subscriptionStatus !== undefined) updateData.subscriptionStatus = data.subscriptionStatus;
+  if (data.subscriptionEndDate !== undefined) updateData.subscriptionEndDate = data.subscriptionEndDate;
+
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+}
+
+export async function getUserByStripeSubscriptionId(subscriptionId: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserSubscriptionInfo(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user subscription: database not available");
+    return undefined;
+  }
+
+  const result = await db
+    .select({
+      subscriptionTier: users.subscriptionTier,
+      stripeCustomerId: users.stripeCustomerId,
+      stripeSubscriptionId: users.stripeSubscriptionId,
+      subscriptionStatus: users.subscriptionStatus,
+      subscriptionEndDate: users.subscriptionEndDate,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}

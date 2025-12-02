@@ -6,6 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import * as calc from "./calculations";
 import { TRPCError } from "@trpc/server";
+import { subscriptionRouter } from "./subscription-router";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -110,6 +111,7 @@ const portfolioGoalSchema = z.object({
 
 export const appRouter = router({
   system: systemRouter,
+  subscription: subscriptionRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
