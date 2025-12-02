@@ -1,11 +1,39 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import {
+  InsertUser,
+  users,
+  properties,
+  InsertProperty,
+  propertyOwnership,
+  InsertPropertyOwnership,
+  purchaseCosts,
+  InsertPurchaseCosts,
+  propertyUsagePeriods,
+  InsertPropertyUsagePeriod,
+  loans,
+  InsertLoan,
+  propertyValuations,
+  InsertPropertyValuation,
+  growthRatePeriods,
+  InsertGrowthRatePeriod,
+  rentalIncome,
+  InsertRentalIncome,
+  expenseLogs,
+  InsertExpenseLog,
+  expenseBreakdown,
+  InsertExpenseBreakdown,
+  depreciationSchedule,
+  InsertDepreciationSchedule,
+  capitalExpenditure,
+  InsertCapitalExpenditure,
+  portfolioGoals,
+  InsertPortfolioGoal,
+} from "../drizzle/schema";
+import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -17,6 +45,8 @@ export async function getDb() {
   }
   return _db;
 }
+
+// ============ USER OPERATIONS ============
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -56,8 +86,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.role = user.role;
       updateSet.role = user.role;
     } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
+      values.role = "admin";
+      updateSet.role = "admin";
     }
 
     if (!values.lastSignedIn) {
@@ -89,4 +119,407 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ============ PROPERTY OPERATIONS ============
+
+export async function createProperty(property: InsertProperty) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(properties).values(property);
+  return result[0].insertId;
+}
+
+export async function getPropertiesByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(properties).where(eq(properties.userId, userId)).orderBy(desc(properties.createdAt));
+}
+
+export async function getPropertyById(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(properties).where(eq(properties.id, propertyId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateProperty(propertyId: number, updates: Partial<InsertProperty>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(properties).set(updates).where(eq(properties.id, propertyId));
+}
+
+export async function deleteProperty(propertyId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Delete all related records first
+  await db.delete(propertyOwnership).where(eq(propertyOwnership.propertyId, propertyId));
+  await db.delete(purchaseCosts).where(eq(purchaseCosts.propertyId, propertyId));
+  await db.delete(propertyUsagePeriods).where(eq(propertyUsagePeriods.propertyId, propertyId));
+  await db.delete(loans).where(eq(loans.propertyId, propertyId));
+  await db.delete(propertyValuations).where(eq(propertyValuations.propertyId, propertyId));
+  await db.delete(growthRatePeriods).where(eq(growthRatePeriods.propertyId, propertyId));
+  await db.delete(rentalIncome).where(eq(rentalIncome.propertyId, propertyId));
+  await db.delete(expenseLogs).where(eq(expenseLogs.propertyId, propertyId));
+  await db.delete(depreciationSchedule).where(eq(depreciationSchedule.propertyId, propertyId));
+  await db.delete(capitalExpenditure).where(eq(capitalExpenditure.propertyId, propertyId));
+
+  // Delete the property itself
+  await db.delete(properties).where(eq(properties.id, propertyId));
+}
+
+// ============ PROPERTY OWNERSHIP OPERATIONS ============
+
+export async function setPropertyOwnership(propertyId: number, owners: InsertPropertyOwnership[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Delete existing ownership records
+  await db.delete(propertyOwnership).where(eq(propertyOwnership.propertyId, propertyId));
+
+  // Insert new ownership records
+  if (owners.length > 0) {
+    await db.insert(propertyOwnership).values(owners);
+  }
+}
+
+export async function getPropertyOwnership(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(propertyOwnership).where(eq(propertyOwnership.propertyId, propertyId));
+}
+
+// ============ PURCHASE COSTS OPERATIONS ============
+
+export async function upsertPurchaseCosts(costs: InsertPurchaseCosts) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .insert(purchaseCosts)
+    .values(costs)
+    .onDuplicateKeyUpdate({
+      set: {
+        agentFee: costs.agentFee,
+        stampDuty: costs.stampDuty,
+        legalFee: costs.legalFee,
+        inspectionFee: costs.inspectionFee,
+        otherCosts: costs.otherCosts,
+      },
+    });
+}
+
+export async function getPurchaseCosts(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(purchaseCosts).where(eq(purchaseCosts.propertyId, propertyId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ============ PROPERTY USAGE PERIODS OPERATIONS ============
+
+export async function addPropertyUsagePeriod(period: InsertPropertyUsagePeriod) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(propertyUsagePeriods).values(period);
+  return result[0].insertId;
+}
+
+export async function getPropertyUsagePeriods(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(propertyUsagePeriods).where(eq(propertyUsagePeriods.propertyId, propertyId)).orderBy(asc(propertyUsagePeriods.startDate));
+}
+
+export async function deletePropertyUsagePeriod(periodId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(propertyUsagePeriods).where(eq(propertyUsagePeriods.id, periodId));
+}
+
+// ============ LOAN OPERATIONS ============
+
+export async function createLoan(loan: InsertLoan) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(loans).values(loan);
+  return result[0].insertId;
+}
+
+export async function getPropertyLoans(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(loans).where(eq(loans.propertyId, propertyId)).orderBy(desc(loans.createdAt));
+}
+
+export async function getLoanById(loanId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(loans).where(eq(loans.id, loanId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateLoan(loanId: number, updates: Partial<InsertLoan>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(loans).set(updates).where(eq(loans.id, loanId));
+}
+
+export async function deleteLoan(loanId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(loans).where(eq(loans.id, loanId));
+}
+
+// ============ PROPERTY VALUATION OPERATIONS ============
+
+export async function addPropertyValuation(valuation: InsertPropertyValuation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(propertyValuations).values(valuation);
+  return result[0].insertId;
+}
+
+export async function getPropertyValuations(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(propertyValuations).where(eq(propertyValuations.propertyId, propertyId)).orderBy(desc(propertyValuations.valuationDate));
+}
+
+export async function deletePropertyValuation(valuationId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(propertyValuations).where(eq(propertyValuations.id, valuationId));
+}
+
+// ============ GROWTH RATE PERIODS OPERATIONS ============
+
+export async function addGrowthRatePeriod(period: InsertGrowthRatePeriod) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(growthRatePeriods).values(period);
+  return result[0].insertId;
+}
+
+export async function getGrowthRatePeriods(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(growthRatePeriods).where(eq(growthRatePeriods.propertyId, propertyId)).orderBy(asc(growthRatePeriods.startYear));
+}
+
+export async function deleteGrowthRatePeriod(periodId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(growthRatePeriods).where(eq(growthRatePeriods.id, periodId));
+}
+
+// ============ RENTAL INCOME OPERATIONS ============
+
+export async function addRentalIncome(income: InsertRentalIncome) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(rentalIncome).values(income);
+  return result[0].insertId;
+}
+
+export async function getRentalIncome(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(rentalIncome).where(eq(rentalIncome.propertyId, propertyId)).orderBy(desc(rentalIncome.startDate));
+}
+
+export async function deleteRentalIncome(incomeId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(rentalIncome).where(eq(rentalIncome.id, incomeId));
+}
+
+// ============ EXPENSE OPERATIONS ============
+
+export async function createExpenseLog(expense: InsertExpenseLog) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(expenseLogs).values(expense);
+  return result[0].insertId;
+}
+
+export async function getExpenseLogs(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(expenseLogs).where(eq(expenseLogs.propertyId, propertyId)).orderBy(desc(expenseLogs.date));
+}
+
+export async function deleteExpenseLog(expenseId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Delete breakdown items first
+  await db.delete(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseId));
+  // Delete the expense log
+  await db.delete(expenseLogs).where(eq(expenseLogs.id, expenseId));
+}
+
+export async function addExpenseBreakdown(breakdown: InsertExpenseBreakdown) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(expenseBreakdown).values(breakdown);
+  return result[0].insertId;
+}
+
+export async function getExpenseBreakdown(expenseLogId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseLogId));
+}
+
+// ============ DEPRECIATION SCHEDULE OPERATIONS ============
+
+export async function addDepreciationSchedule(schedule: InsertDepreciationSchedule) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(depreciationSchedule).values(schedule);
+  return result[0].insertId;
+}
+
+export async function getDepreciationSchedule(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(depreciationSchedule).where(eq(depreciationSchedule.propertyId, propertyId)).orderBy(desc(depreciationSchedule.asAtDate));
+}
+
+export async function deleteDepreciationSchedule(scheduleId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(depreciationSchedule).where(eq(depreciationSchedule.id, scheduleId));
+}
+
+// ============ CAPITAL EXPENDITURE OPERATIONS ============
+
+export async function addCapitalExpenditure(capex: InsertCapitalExpenditure) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(capitalExpenditure).values(capex);
+  return result[0].insertId;
+}
+
+export async function getCapitalExpenditure(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(capitalExpenditure).where(eq(capitalExpenditure.propertyId, propertyId)).orderBy(desc(capitalExpenditure.date));
+}
+
+export async function deleteCapitalExpenditure(capexId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(capitalExpenditure).where(eq(capitalExpenditure.id, capexId));
+}
+
+// ============ PORTFOLIO GOALS OPERATIONS ============
+
+export async function upsertPortfolioGoal(goal: InsertPortfolioGoal) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .insert(portfolioGoals)
+    .values(goal)
+    .onDuplicateKeyUpdate({
+      set: {
+        goalYear: goal.goalYear,
+        targetEquity: goal.targetEquity,
+        targetValue: goal.targetValue,
+      },
+    });
+}
+
+export async function getPortfolioGoal(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(portfolioGoals).where(eq(portfolioGoals.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ============ COMPLEX QUERIES FOR PORTFOLIO ANALYSIS ============
+
+export async function getCompletePropertyData(propertyId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const property = await getPropertyById(propertyId);
+  if (!property) return null;
+
+  const [ownership, costs, usagePeriods, propertyLoans, valuations, growthRates, rental, expenses, depreciation, capex] = await Promise.all([
+    getPropertyOwnership(propertyId),
+    getPurchaseCosts(propertyId),
+    getPropertyUsagePeriods(propertyId),
+    getPropertyLoans(propertyId),
+    getPropertyValuations(propertyId),
+    getGrowthRatePeriods(propertyId),
+    getRentalIncome(propertyId),
+    getExpenseLogs(propertyId),
+    getDepreciationSchedule(propertyId),
+    getCapitalExpenditure(propertyId),
+  ]);
+
+  return {
+    property,
+    ownership,
+    costs,
+    usagePeriods,
+    loans: propertyLoans,
+    valuations,
+    growthRates,
+    rental,
+    expenses,
+    depreciation,
+    capex,
+  };
+}
+
+export async function getUserPortfolioData(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const userProperties = await getPropertiesByUserId(userId);
+  const goal = await getPortfolioGoal(userId);
+
+  const propertiesData = await Promise.all(userProperties.map((prop) => getCompletePropertyData(prop.id)));
+
+  return {
+    properties: propertiesData.filter((p) => p !== null),
+    goal,
+  };
+}
