@@ -7,11 +7,12 @@ interface CashflowChartProps {
   weeklyRent: number;
   weeklyExpenses: number;
   monthlyMortgage: number;
+  rentGrowthRate?: number; // in basis points (e.g., 300 = 3%)
 }
 
 type TimelineOption = 1 | 3 | 5 | 10;
 
-export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage }: CashflowChartProps) {
+export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage, rentGrowthRate = 0 }: CashflowChartProps) {
   const [selectedTimeline, setSelectedTimeline] = useState<TimelineOption>(1);
 
   // Generate data based on selected timeline
@@ -19,15 +20,23 @@ export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage }: C
     const months = years * 12;
     const data = [];
     
-    // Convert weekly cents to monthly cents
-    const monthlyRent = Math.round(weeklyRent * 52 / 12);
+    // Convert weekly cents to monthly cents (initial values)
+    const initialMonthlyRent = Math.round(weeklyRent * 52 / 12);
     const monthlyExpenses = Math.round(weeklyExpenses * 52 / 12);
+    
+    // Convert growth rate from basis points to decimal (e.g., 300 -> 0.03)
+    const annualGrowthRate = rentGrowthRate / 10000;
 
     for (let i = 0; i < months; i++) {
       const monthIndex = i % 12;
       const year = Math.floor(i / 12);
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const label = years === 1 ? monthNames[monthIndex] : `${monthNames[monthIndex]} ${year + 1}`;
+      
+      // Apply compound growth: initialRent × (1 + growthRate)^years
+      const yearsElapsed = i / 12;
+      const growthMultiplier = Math.pow(1 + annualGrowthRate, yearsElapsed);
+      const monthlyRent = Math.round(initialMonthlyRent * growthMultiplier);
 
       data.push({
         month: label,

@@ -638,11 +638,12 @@ export default function PropertyDetailEnhanced() {
             </Card>
           </div>
 
-          {/* 12-Month Cashflow Chart */}
+          {/* Cashflow Chart with Growth */}
           <CashflowChart
             weeklyRent={weeklyRent}
             weeklyExpenses={weeklyExpenses}
             monthlyMortgage={totalMonthlyMortgage}
+            rentGrowthRate={rental?.[0]?.growthRate || 0}
           />
 
           {/* Expense Logs */}

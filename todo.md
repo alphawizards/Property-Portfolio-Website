@@ -478,3 +478,15 @@
 - [x] Update chart to show selected timeline period
 - [x] Ensure chart data calculations work for all timeline options
 - [x] Test chart updates when timeline selection changes
+
+
+## Apply Rent Growth Rate to Timeline Chart (User Requested)
+
+### Rent Growth Visualization
+- [x] Update CashflowChart component to accept rentGrowthRate prop
+- [x] Apply compound growth formula to rental income over timeline period
+- [x] Calculate monthly rent for each month based on: initialRent × (1 + growthRate)^years
+- [x] Update chart data generation to show increasing rental income over time
+- [x] Ensure growth applies correctly for all timeline options (1/3/5/10 years)
+- [ ] Update monthly income summary to show current month value (not average)
+- [x] Test with example: $500/week with 3% growth → Year 1: $500/week, Year 2: $515/week, Year 3: $530.45/week
