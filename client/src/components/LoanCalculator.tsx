@@ -31,6 +31,7 @@ interface LoanCalculatorProps {
   initialInterestRate?: number; // in basis points
   initialTerm?: number; // years
   mainLoanId?: number; // ID of the main loan to update
+  purchaseDate?: Date; // Property purchase date for loan start date
 }
 
 export function LoanCalculator({
@@ -41,10 +42,11 @@ export function LoanCalculator({
   initialInterestRate = 600, // 6%
   initialTerm = 25,
   mainLoanId,
+  purchaseDate,
 }: LoanCalculatorProps) {
   // Loan parameters
   const [propertyValue, setPropertyValue] = useState(initialPropertyValue);
-  const [deposit, setDeposit] = useState(initialDeposit || initialPropertyValue * 0.2);
+  const [deposit, setDeposit] = useState(initialDeposit !== undefined ? initialDeposit : initialPropertyValue * 0.2);
   const [loanAmount, setLoanAmount] = useState(initialLoanAmount || initialPropertyValue * 0.8);
   const [interestRate, setInterestRate] = useState(initialInterestRate);
   const [termYears, setTermYears] = useState(initialTerm);
@@ -163,6 +165,14 @@ export function LoanCalculator({
     },
   });
 
+  const createLoanMutation = trpc.loans.create.useMutation({
+    onSuccess: () => {
+      utils.properties.getById.invalidate({ id: propertyId });
+      utils.loans.getByProperty.invalidate({ propertyId });
+      utils.properties.listWithFinancials.invalidate();
+    },
+  });
+
   const handleSaveToProperty = async () => {
     try {
       // Update property valuation
@@ -172,14 +182,33 @@ export function LoanCalculator({
         date: new Date(),
       });
 
-      // Update main loan if it exists
+      // Update or create main loan
       if (mainLoanId) {
+        // Update existing loan
         await updateLoanMutation.mutateAsync({
           id: mainLoanId,
           data: {
             currentAmount: loanAmount,
             interestRate,
             remainingTermYears: termYears,
+          },
+        });
+      } else {
+        // Create new loan if none exists
+        await createLoanMutation.mutateAsync({
+          propertyId,
+          loan: {
+            loanType: 'PrincipalLoan',
+            lenderName: 'Main Loan',
+            loanPurpose: 'PropertyPurchase',
+            loanStructure,
+            startDate: purchaseDate || new Date(),
+            originalAmount: loanAmount,
+            currentAmount: loanAmount,
+            interestRate,
+            remainingTermYears: termYears,
+            remainingIOPeriodYears: loanStructure === 'InterestOnly' ? termYears : 0,
+            repaymentFrequency,
           },
         });
       }
@@ -191,7 +220,7 @@ export function LoanCalculator({
     }
   };
 
-  const isSaving = updateValuationMutation.isPending || updateLoanMutation.isPending;;
+  const isSaving = updateValuationMutation.isPending || updateLoanMutation.isPending || createLoanMutation.isPending;
 
   return (
     <div className="space-y-6">

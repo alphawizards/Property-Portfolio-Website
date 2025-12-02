@@ -412,3 +412,17 @@
 - [ ] Verify portfolio summary reflects calculator changes after save
 - [ ] Verify property list shows updated debt after save
 - [ ] Test that 30-year projections use updated parameters
+
+
+## Fix Save to Property Loan Creation (User Reported Issue)
+
+- [ ] Modify handleSaveToProperty to create loan if no loans exist
+- [ ] Modify handleSaveToProperty to update main loan if it exists
+- [ ] Ensure loan amount matches calculator Loan Amount value
+- [ ] Ensure loan interest rate matches calculator Interest Rate value
+- [ ] Ensure loan term matches calculator Term value
+- [ ] Verify Total Debt updates to match loan amount after save
+- [ ] Verify Equity calculates correctly (Property Value - Total Debt)
+- [ ] Verify LVR calculates correctly (Total Debt / Property Value × 100)
+- [ ] Test on property with no loans (should create new loan)
+- [ ] Test on property with existing loan (should update loan)

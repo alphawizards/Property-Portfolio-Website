@@ -680,10 +680,11 @@ export default function PropertyDetailEnhanced() {
           propertyId={propertyId}
           initialPropertyValue={currentValue}
           initialLoanAmount={totalDebt}
-          initialDeposit={currentValue - totalDebt}
+          initialDeposit={totalDebt > 0 ? currentValue - totalDebt : undefined}
           initialInterestRate={loans?.[0]?.interestRate || 600}
           mainLoanId={loans?.[0]?.id}
           initialTerm={loans?.[0]?.remainingTermYears || 25}
+          purchaseDate={property?.purchaseDate}
         />
       </div>
     </div>
