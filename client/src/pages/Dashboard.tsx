@@ -12,7 +12,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 export default function Dashboard() {
   const { user } = useAuth();
   const [selectedYears, setSelectedYears] = useState(30);
-  const [viewMode, setViewMode] = useState<"equity" | "cashflow">("equity");
+  const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
 
   const currentYear = new Date().getFullYear();
 
@@ -146,10 +146,11 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "equity" | "cashflow")}>
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "equity" | "cashflow" | "debt")}>
                   <TabsList>
                     <TabsTrigger value="equity">Equity</TabsTrigger>
                     <TabsTrigger value="cashflow">Cashflow</TabsTrigger>
+                    <TabsTrigger value="debt">Debt</TabsTrigger>
                   </TabsList>
                 </Tabs>
 
@@ -198,7 +199,7 @@ export default function Dashboard() {
                       <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeDasharray="5 5" />
                       <Area type="monotone" dataKey="Portfolio Equity" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
                     </AreaChart>
-                  ) : (
+                  ) : viewMode === "cashflow" ? (
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
@@ -207,6 +208,15 @@ export default function Dashboard() {
                       <Legend />
                       <Line type="monotone" dataKey="Cashflow" stroke="#8b5cf6" strokeWidth={2} />
                     </LineChart>
+                  ) : (
+                    <AreaChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
+                      <Tooltip formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`} />
+                      <Legend />
+                      <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} />
+                    </AreaChart>
                   )}
                 </ResponsiveContainer>
               </>

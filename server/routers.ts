@@ -357,6 +357,14 @@ export const appRouter = router({
 
   // ============ RENTAL INCOME OPERATIONS ============
   rentalIncome: router({
+    getByProperty: protectedProcedure.input(z.object({ propertyId: z.number().int() })).query(async ({ input, ctx }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || property.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return await db.getPropertyRentalIncome(input.propertyId);
+    }),
+
     add: protectedProcedure
       .input(
         z.object({
@@ -381,6 +389,14 @@ export const appRouter = router({
 
   // ============ EXPENSE OPERATIONS ============
   expenses: router({
+    getByProperty: protectedProcedure.input(z.object({ propertyId: z.number().int() })).query(async ({ input, ctx }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || property.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return await db.getPropertyExpenses(input.propertyId);
+    }),
+
     add: protectedProcedure
       .input(
         z.object({

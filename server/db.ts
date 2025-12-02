@@ -585,3 +585,12 @@ export async function getUserSubscriptionInfo(userId: number) {
 
   return result.length > 0 ? result[0] : undefined;
 }
+
+
+export async function getPropertyRentalIncome(propertyId: number) {
+  return await getRentalIncome(propertyId);
+}
+
+export async function getPropertyExpenses(propertyId: number) {
+  return await getExpenseLogs(propertyId);
+}

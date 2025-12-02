@@ -163,3 +163,18 @@
 - [x] Add expenses (rates, insurance, maintenance, etc.)
 - [x] Add depreciation schedule
 - [x] Run seed script and verify data in dashboard
+- [x] Fix monetary values to use cents as per schema
+- [x] Verify debt displays correctly ($570k) and equity growth projections work
+
+
+## Loan Repayment & Debt Visualization Enhancements
+
+- [x] Add loan repayment type selector (Interest Only vs Principal & Interest)
+- [x] Add Interest Only period configuration control
+- [x] Create debt tracking chart showing debt over time
+- [x] Show debt decrease for P&I loans vs stable debt for IO loans
+- [x] Add debt projection line to main dashboard chart
+- [x] Enhance cashflow view to show rental income breakdown
+- [x] Enhance cashflow view to show expense breakdown
+- [x] Add toggle to switch between different debt scenarios
+- [x] Verify test property expenses and rental income display correctly
