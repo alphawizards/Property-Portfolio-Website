@@ -31,6 +31,26 @@ export default function PropertyDetailEnhanced() {
     { enabled: !!expenses?.[0]?.id }
   );
 
+  const addExpenseMutation = trpc.expenses.add.useMutation({
+    onSuccess: () => {
+      utils.expenses.getByProperty.invalidate({ propertyId });
+      toast.success("Expense log created");
+    },
+    onError: () => {
+      toast.error("Failed to create expense log");
+    },
+  });
+
+  const deletePropertyMutation = trpc.properties.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Property deleted");
+      setLocation("/");
+    },
+    onError: () => {
+      toast.error("Failed to delete property");
+    },
+  });
+
   const [openExpenseLog, setOpenExpenseLog] = useState<number | null>(null);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [editedValue, setEditedValue] = useState(0);
@@ -250,6 +270,16 @@ export default function PropertyDetailEnhanced() {
               </Button>
               <Button variant="outline" onClick={() => setLocation(`/properties/${propertyId}/analysis`)}>
                 View Analysis
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete "${property.nickname || property.address}"? This action cannot be undone.`)) {
+                    deletePropertyMutation.mutate({ id: propertyId });
+                  }
+                }}
+              >
+                Delete Property
               </Button>
             </div>
           </div>
@@ -651,7 +681,20 @@ export default function PropertyDetailEnhanced() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Expense Logs</CardTitle>
-                <Button size="sm">
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    addExpenseMutation.mutate({
+                      propertyId,
+                      expense: {
+                        date: new Date(),
+                        totalAmount: 1, // 1 cent minimum
+                        frequency: "Monthly" as const,
+                        growthRate: 300, // 3% default
+                      },
+                    });
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Expense Log
                 </Button>

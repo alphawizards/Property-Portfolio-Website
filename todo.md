@@ -490,3 +490,21 @@
 - [x] Ensure growth applies correctly for all timeline options (1/3/5/10 years)
 - [ ] Update monthly income summary to show current month value (not average)
 - [x] Test with example: $500/week with 3% growth → Year 1: $500/week, Year 2: $515/week, Year 3: $530.45/week
+
+
+## Fix Expense Log Display & Add Property Deletion (User Requested)
+
+### Expense Log Display Bug
+- [x] Investigate why expense logs not showing for all properties
+- [x] Check expense log query logic in PropertyDetailEnhanced
+- [x] Verify expense breakdown data is being fetched correctly
+- [x] Fix expense log rendering to show all logs for each property
+- [x] Test expense log display across multiple properties
+
+### Property Deletion Feature
+- [x] Add delete property procedure in backend routers
+- [x] Implement cascade deletion for related data (loans, rental income, expenses, valuations)
+- [x] Add delete button to property detail page
+- [x] Add confirmation dialog before deletion
+- [x] Redirect to home page after successful deletion
+- [x] Test property deletion with various data scenarios
