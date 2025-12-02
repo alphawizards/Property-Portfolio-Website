@@ -303,3 +303,12 @@
 - [ ] Test expense log save → weekly expenses → cashflow chart
 - [ ] Test loan edits → total debt → LVR → portfolio summary
 - [ ] Test property name edit → dashboard property list
+
+
+## Property List Enhancement (User Requested)
+
+- [x] Update property list cards to show Property Value
+- [x] Update property list cards to show Debt
+- [x] Update property list cards to show Equity
+- [x] Ensure financial metrics are calculated correctly for each property
+- [x] Test property list displays all financial information

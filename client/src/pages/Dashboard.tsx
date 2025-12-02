@@ -16,7 +16,7 @@ export default function Dashboard() {
 
   const currentYear = new Date().getFullYear();
 
-  const { data: properties } = trpc.properties.list.useQuery();
+  const { data: properties } = trpc.properties.listWithFinancials.useQuery();
   const { data: goal } = trpc.portfolio.getGoal.useQuery();
   const { data: projections } = trpc.calculations.portfolioProjections.useQuery({
     startYear: currentYear,
@@ -259,8 +259,21 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">{formatCurrency(property.purchasePrice)}</p>
-                        <p className="text-sm text-gray-500">{property.status}</p>
+                        <div className="flex gap-6">
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Value</p>
+                            <p className="font-semibold text-gray-900">{formatCurrency(property.currentValue)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Debt</p>
+                            <p className="font-semibold text-red-600">{formatCurrency(property.totalDebt)}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 mb-1">Equity</p>
+                            <p className="font-semibold text-green-600">{formatCurrency(property.equity)}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{property.status}</p>
                       </div>
                     </div>
                   </Link>

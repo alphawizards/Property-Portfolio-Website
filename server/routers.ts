@@ -129,6 +129,44 @@ export const appRouter = router({
       return await db.getPropertiesByUserId(ctx.user.id);
     }),
 
+    listWithFinancials: protectedProcedure.query(async ({ ctx }) => {
+      const properties = await db.getPropertiesByUserId(ctx.user.id);
+      const currentYear = new Date().getFullYear();
+      
+      const propertiesWithFinancials = await Promise.all(
+        properties.map(async (property) => {
+          const data = await db.getCompletePropertyData(property.id);
+          if (!data) {
+            return {
+              ...property,
+              currentValue: property.purchasePrice,
+              totalDebt: 0,
+              equity: property.purchasePrice,
+              lvr: 0,
+            };
+          }
+          
+          const financials = calc.calculatePropertyEquity(
+            data.property,
+            data.loans,
+            data.valuations,
+            data.growthRates,
+            currentYear
+          );
+          
+          return {
+            ...property,
+            currentValue: financials.propertyValue,
+            totalDebt: financials.totalDebt,
+            equity: financials.equity,
+            lvr: financials.lvr,
+          };
+        })
+      );
+      
+      return propertiesWithFinancials;
+    }),
+
     getById: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
       const property = await db.getPropertyById(input.id);
       if (!property) {
