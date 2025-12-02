@@ -235,3 +235,37 @@
 - Expense log "Save & Continue" button not yet wired to save mutations (requires state management refactor)
 - Mortgage calculator values are not automatically saved to database (calculator is for scenario planning)
 - Test properties (3) have minimal data - only Brisbane Investment has complete financial data
+
+
+## New Feature Implementation (User Requested):
+
+### Expense Log Save Functionality
+- [x] Add state management for expense breakdown categories
+- [x] Wire "Save & Continue" button to expenses.update mutation
+- [x] Add loading states and success/error toasts
+- [ ] Test expense log save and verify data persists
+
+### Calculator Scenario Save/Compare
+- [x] Add loan_scenarios table to schema
+- [x] Add scenarios router with save/load/delete procedures
+- [ ] Add "Save Scenario" button to calculator
+- [ ] Create scenario comparison UI component
+- [ ] Add side-by-side scenario comparison view
+- [ ] Test saving and comparing multiple scenarios
+
+### Editable Property Financial Cards
+- [x] Make Current Value card editable with inline input
+- [x] Add save mutation for updating property valuation
+- [x] Make Total Debt display-only (calculated from loans)
+- [x] Make Equity display-only (calculated field)
+- [x] Make LVR display-only (calculated field)
+- [x] Add edit/save/cancel UI states
+- [ ] Test inline editing and verify updates
+
+### GitHub Integration
+- [ ] Create GitHub repository
+- [ ] Initialize git in project directory
+- [ ] Add .gitignore for node_modules, .env, etc.
+- [ ] Commit all project files
+- [ ] Push to GitHub repository
+- [ ] Verify repository is accessible

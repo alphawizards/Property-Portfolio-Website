@@ -29,6 +29,8 @@ import {
   InsertCapitalExpenditure,
   portfolioGoals,
   InsertPortfolioGoal,
+  loanScenarios,
+  InsertLoanScenario,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -608,4 +610,41 @@ export async function getPropertyRentalIncome(propertyId: number) {
 
 export async function getPropertyExpenses(propertyId: number) {
   return await getExpenseLogs(propertyId);
+}
+
+
+// ============ LOAN SCENARIOS OPERATIONS ============
+
+export async function saveLoanScenario(scenario: InsertLoanScenario) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(loanScenarios).values(scenario);
+  return Number((result as any).insertId);
+}
+
+export async function getLoanScenariosByProperty(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(loanScenarios)
+    .where(eq(loanScenarios.propertyId, propertyId))
+    .orderBy(desc(loanScenarios.createdAt));
+}
+
+export async function getLoanScenarioById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(loanScenarios).where(eq(loanScenarios.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function deleteLoanScenario(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(loanScenarios).where(eq(loanScenarios.id, id));
 }

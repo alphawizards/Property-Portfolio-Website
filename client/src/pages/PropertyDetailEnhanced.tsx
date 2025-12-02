@@ -12,6 +12,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { LoanCalculator } from "@/components/LoanCalculator";
 import { CashflowChart } from "@/components/CashflowChart";
+import { ExpenseBreakdownLoader } from "@/components/ExpenseBreakdownLoader";
 
 export default function PropertyDetailEnhanced() {
   const params = useParams();
@@ -27,6 +28,19 @@ export default function PropertyDetailEnhanced() {
   const { data: growthRates } = trpc.growthRates.getByProperty.useQuery({ propertyId });
 
   const [openExpenseLog, setOpenExpenseLog] = useState<number | null>(null);
+  const [isEditingValue, setIsEditingValue] = useState(false);
+  const [editedValue, setEditedValue] = useState(0);
+
+  const utils = trpc.useUtils();
+  const updateValuationMutation = trpc.valuations.updateCurrent.useMutation({
+    onSuccess: () => {
+      toast.success("Property value updated");
+      utils.valuations.getByProperty.invalidate({ propertyId });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update: ${error.message}`);
+    },
+  });
 
   if (authLoading || isLoading) {
     return (
@@ -169,7 +183,53 @@ export default function PropertyDetailEnhanced() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-gray-600 mb-1">Current Value</div>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(currentValue)}</div>
+                {isEditingValue ? (
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      type="number"
+                      value={editedValue / 100}
+                      onChange={(e) => setEditedValue(Math.round(parseFloat(e.target.value || '0') * 100))}
+                      className="text-xl font-bold"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          updateValuationMutation.mutate({
+                            propertyId,
+                            value: editedValue,
+                            date: new Date(),
+                          });
+                          setIsEditingValue(false);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditedValue(currentValue);
+                          setIsEditingValue(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="text-2xl font-bold text-green-600 cursor-pointer hover:bg-gray-50 rounded px-2 py-1 -mx-2"
+                    onClick={() => {
+                      setEditedValue(currentValue);
+                      setIsEditingValue(true);
+                    }}
+                    title="Click to edit"
+                  >
+                    {formatCurrency(currentValue)}
+                  </div>
+                )}
               </CardContent>
             </Card>
             <Card>
@@ -330,72 +390,7 @@ export default function PropertyDetailEnhanced() {
                           </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <div className="p-4 border-t bg-gray-50">
-                            <div className="mb-4">
-                              <Label>Date</Label>
-                              <Input type="date" value={new Date(expense.date).toISOString().split('T')[0]} />
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="flex gap-2 border-b pb-2">
-                                <Button variant="ghost" size="sm" className="flex-1">General</Button>
-                                <Button variant="outline" size="sm" className="flex-1">Breakdown</Button>
-                              </div>
-
-                              {/* Expense Categories */}
-                              {[
-                                'Repairs & Maintenance',
-                                'Marketing & Advertising',
-                                'Building Insurance',
-                                'Landlord Insurance',
-                                'Council Rates',
-                                'Water Rates',
-                                'Strata Fees',
-                                'Land Tax',
-                                'Property Management Fees'
-                              ].map((category) => (
-                                <div key={category} className="flex items-center gap-4">
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <div className="w-10 h-10 bg-lime-300 rounded-full flex items-center justify-center">
-                                      <div className="w-6 h-6 bg-lime-400 rounded"></div>
-                                    </div>
-                                    <span className="text-sm">{category}</span>
-                                  </div>
-                                  <div className="flex gap-4 flex-1">
-                                    <div className="flex-1">
-                                      <Label className="text-xs">Amount</Label>
-                                      <Input type="number" placeholder="0" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <Label className="text-xs">Frequency</Label>
-                                      <Select defaultValue="Annually">
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="Weekly">Weekly</SelectItem>
-                                          <SelectItem value="Monthly">Monthly</SelectItem>
-                                          <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                          <SelectItem value="Annually">Annually</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-
-                              <div className="mt-6">
-                                <Label>Expense Growth Rate (%)</Label>
-                                <Input type="number" defaultValue="3" step="0.1" />
-                                <p className="text-xs text-gray-600 mt-1">2 Dec 2025 - Forever</p>
-                              </div>
-                            </div>
-
-                            <div className="flex gap-2 mt-6">
-                              <Button variant="outline" className="flex-1">Back</Button>
-                              <Button className="flex-1">Save & Continue</Button>
-                            </div>
-                          </div>
+                          <ExpenseBreakdownLoader expenseLogId={expense.id} propertyId={propertyId} />
                         </CollapsibleContent>
                       </div>
                     </Collapsible>

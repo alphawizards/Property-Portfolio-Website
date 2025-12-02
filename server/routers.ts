@@ -334,6 +334,27 @@ export const appRouter = router({
         return { id };
       }),
 
+    updateCurrent: protectedProcedure
+      .input(
+        z.object({
+          propertyId: z.number().int(),
+          value: z.number().int(),
+          date: z.date(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const id = await db.addPropertyValuation({
+          propertyId: input.propertyId,
+          valuationDate: input.date,
+          value: input.value,
+        });
+        return { id };
+      }),
+
     delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
       await db.deletePropertyValuation(input.id);
       return { success: true };
@@ -462,6 +483,10 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    getBreakdown: protectedProcedure.input(z.object({ expenseLogId: z.number().int() })).query(async ({ input }) => {
+      return await db.getExpenseBreakdown(input.expenseLogId);
+    }),
+
     delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
       await db.deleteExpenseLog(input.id);
       return { success: true };
@@ -581,6 +606,61 @@ export const appRouter = router({
         const portfolioData = await db.getUserPortfolioData(ctx.user.id);
         if (!portfolioData) return [];
         return calc.generateInvestmentComparison(portfolioData.properties, input.startYear, input.endYear, input.shareAnnualReturn);
+      }),
+  }),
+
+  // ============ LOAN SCENARIOS ============
+  scenarios: router({
+    getByProperty: protectedProcedure
+      .input(z.object({ propertyId: z.number().int() }))
+      .query(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await db.getLoanScenariosByProperty(input.propertyId);
+      }),
+
+    save: protectedProcedure
+      .input(
+        z.object({
+          propertyId: z.number().int(),
+          name: z.string().min(1, "Scenario name is required"),
+          description: z.string().optional(),
+          propertyValue: z.number().int(),
+          deposit: z.number().int(),
+          loanAmount: z.number().int(),
+          interestRate: z.number().int(),
+          loanTerm: z.number().int(),
+          repaymentFrequency: z.string(),
+          interestOption: z.string(),
+          offsetBalance: z.number().int().default(0),
+          extraRepaymentAmount: z.number().int().default(0),
+          extraRepaymentFrequency: z.string().optional(),
+          propertyGrowthRate: z.number().int(),
+          totalInterest: z.number().int().optional(),
+          totalPayments: z.number().int().optional(),
+          futurePropertyValue: z.number().int().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const id = await db.saveLoanScenario({ ...input, userId: ctx.user.id });
+        return { id };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ input, ctx }) => {
+        const scenario = await db.getLoanScenarioById(input.id);
+        if (!scenario || scenario.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        await db.deleteLoanScenario(input.id);
+        return { success: true };
       }),
   }),
 

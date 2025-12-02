@@ -273,3 +273,42 @@ export const interestRateForecasts = mysqlTable("interest_rate_forecasts", {
 
 export type InterestRateForecast = typeof interestRateForecasts.$inferSelect;
 export type InsertInterestRateForecast = typeof interestRateForecasts.$inferInsert;
+
+/**
+ * Loan scenarios - stores saved calculator scenarios for comparison
+ */
+export const loanScenarios = mysqlTable("loan_scenarios", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  // Loan parameters
+  propertyValue: int("propertyValue").notNull(), // in cents
+  deposit: int("deposit").notNull(), // in cents
+  loanAmount: int("loanAmount").notNull(), // in cents
+  interestRate: int("interestRate").notNull(), // in basis points
+  loanTerm: int("loanTerm").notNull(), // in months
+  repaymentFrequency: varchar("repaymentFrequency", { length: 50 }).notNull(),
+  interestOption: varchar("interestOption", { length: 50 }).notNull(),
+  
+  // Extra payments
+  offsetBalance: int("offsetBalance").default(0), // in cents
+  extraRepaymentAmount: int("extraRepaymentAmount").default(0), // in cents
+  extraRepaymentFrequency: varchar("extraRepaymentFrequency", { length: 50 }),
+  
+  // Property growth
+  propertyGrowthRate: int("propertyGrowthRate").notNull(), // in basis points
+  
+  // Calculated results
+  totalInterest: int("totalInterest"), // in cents
+  totalPayments: int("totalPayments"), // in cents
+  futurePropertyValue: int("futurePropertyValue"), // in cents
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LoanScenario = typeof loanScenarios.$inferSelect;
+export type InsertLoanScenario = typeof loanScenarios.$inferInsert;
