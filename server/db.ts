@@ -398,6 +398,21 @@ export async function getExpenseBreakdown(expenseLogId: number) {
   return await db.select().from(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseLogId));
 }
 
+export async function getExpenseLogById(expenseId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db.select().from(expenseLogs).where(eq(expenseLogs.id, expenseId));
+  return results[0] || null;
+}
+
+export async function deleteExpenseBreakdownByLogId(expenseLogId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseLogId));
+}
+
 // ============ DEPRECIATION SCHEDULE OPERATIONS ============
 
 export async function addDepreciationSchedule(schedule: InsertDepreciationSchedule) {

@@ -437,6 +437,31 @@ export const appRouter = router({
         return { id: expenseId };
       }),
 
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().int(),
+          breakdown: z.array(expenseBreakdownSchema),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const expenseLog = await db.getExpenseLogById(input.id);
+        if (!expenseLog) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
+        const property = await db.getPropertyById(expenseLog.propertyId);
+        if (!property || property.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        // Delete existing breakdown items
+        await db.deleteExpenseBreakdownByLogId(input.id);
+        // Add new breakdown items
+        for (const item of input.breakdown) {
+          await db.addExpenseBreakdown({ ...item, expenseLogId: input.id });
+        }
+        return { success: true };
+      }),
+
     delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
       await db.deleteExpenseLog(input.id);
       return { success: true };

@@ -220,3 +220,18 @@
 - [x] Integrate calculator into property detail page
 - [x] Test all slider interactions and chart updates
 - [x] Verify calculations match expected loan amortization (offset reduces interest correctly)
+
+
+## Completed in this session:
+- [x] Fixed compilation errors (duplicate useAuth import)
+- [x] Added expenses.update mutation for saving expense log data
+- [x] Created 12-month cashflow chart component with stacked area visualization
+- [x] Integrated cashflow chart into property detail page
+- [x] Added monthly mortgage payment calculation
+- [x] Verified portfolio summary correctly aggregates Total Value, Debt, and Equity from all properties
+- [x] Verified data flows correctly: Individual Properties → Portfolio Summary
+
+## Known limitations:
+- Expense log "Save & Continue" button not yet wired to save mutations (requires state management refactor)
+- Mortgage calculator values are not automatically saved to database (calculator is for scenario planning)
+- Test properties (3) have minimal data - only Brisbane Investment has complete financial data

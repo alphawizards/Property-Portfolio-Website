@@ -11,6 +11,7 @@ import { useLocation, useParams } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
 import { LoanCalculator } from "@/components/LoanCalculator";
+import { CashflowChart } from "@/components/CashflowChart";
 
 export default function PropertyDetailEnhanced() {
   const params = useParams();
@@ -62,7 +63,24 @@ export default function PropertyDetailEnhanced() {
   const monthlyExpenses = expenses?.[0]?.totalAmount || 0;
   const weeklyExpenses = (monthlyExpenses * 12) / 52;
   
-  // Weekly cashflow
+  // Calculate monthly mortgage payments
+  const calculateMonthlyPayment = (principal: number, annualRate: number, years: number) => {
+    const monthlyRate = annualRate / 100 / 12;
+    const numPayments = years * 12;
+    if (monthlyRate === 0) return principal / numPayments;
+    return principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+  };
+  
+  const totalMonthlyMortgage = loans?.reduce((sum, loan) => {
+    const monthlyPayment = calculateMonthlyPayment(
+      loan.currentAmount / 100, // Convert cents to dollars
+      loan.interestRate / 100, // Convert basis points to percentage
+      loan.remainingTermYears
+    );
+    return sum + monthlyPayment;
+  }, 0) || 0;
+  
+  // Weekly cashflow (excluding mortgage)
   const weeklyCashflow = weeklyRent - weeklyExpenses;
 
   // Format currency
@@ -273,6 +291,13 @@ export default function PropertyDetailEnhanced() {
               </CardContent>
             </Card>
           </div>
+
+          {/* 12-Month Cashflow Chart */}
+          <CashflowChart
+            weeklyRent={weeklyRent}
+            weeklyExpenses={weeklyExpenses}
+            monthlyMortgage={totalMonthlyMortgage}
+          />
 
           {/* Expense Logs */}
           <Card>
