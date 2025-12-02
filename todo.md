@@ -150,3 +150,16 @@
 - [x] Write unit tests for financial calculations
 - [x] Write unit tests for subscription functionality
 - [x] Run all tests and ensure they pass (6/6 tests passing)
+
+
+## Test Data Creation
+
+- [x] Create seed script for realistic investment property
+- [x] Add property details (purchase price, date, location)
+- [x] Add equity loans with realistic terms
+- [x] Add main principal loan with IO period
+- [x] Add property valuations and growth rates
+- [x] Add rental income with growth projections
+- [x] Add expenses (rates, insurance, maintenance, etc.)
+- [x] Add depreciation schedule
+- [x] Run seed script and verify data in dashboard
