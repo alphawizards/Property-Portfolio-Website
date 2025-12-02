@@ -178,3 +178,26 @@
 - [x] Enhance cashflow view to show expense breakdown
 - [x] Add toggle to switch between different debt scenarios
 - [x] Verify test property expenses and rental income display correctly
+
+
+## Property Detail Page Enhancements
+
+- [x] Redesign PropertyDetail page with comprehensive sections
+- [x] Add Property Details section (address, purchase info, ownership)
+- [x] Add Financials Overview section (value, equity, debt)
+- [x] Add Loans section showing all loans with balances
+- [x] Add Rental Income section with weekly rent display
+- [x] Add Expenses section with detailed breakdown
+- [x] Add Cashflow Summary (income minus expenses weekly)
+- [x] Create Expense Log component matching reference design
+- [x] Add expense breakdown categories (repairs, insurance, rates, etc.)
+- [x] Add collapsible expense log entries
+- [x] Add growth rate controls for rental income
+- [x] Add growth rate controls for expenses
+- [x] Add growth rate controls for property value
+- [x] Make all financial fields editable
+- [ ] Populate Property 1 with realistic placeholder data (deferred - test properties)
+- [ ] Populate Property 2 with realistic placeholder data (deferred - test properties)
+- [ ] Populate Property 3 with realistic placeholder data (deferred - test properties)
+- [x] Populate Brisbane property with complete financial data
+- [x] Test property detail page displays all information correctly

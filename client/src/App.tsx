@@ -4,7 +4,7 @@ import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
 import Properties from "@/pages/Properties";
 import AddPropertyExtended from "@/pages/AddPropertyExtended";
-import PropertyDetail from "@/pages/PropertyDetail";
+import PropertyDetailEnhanced from "@/pages/PropertyDetailEnhanced";
 import Comparison from "@/pages/Comparison";
 import Subscription from "@/pages/Subscription";
 import PropertyAnalysis from "@/pages/PropertyAnalysis";
@@ -18,7 +18,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/properties" component={Properties} />
       <Route path="/properties/new" component={AddPropertyExtended} />
-      <Route path="/properties/:id" component={PropertyDetail} />
+      <Route path="/properties/:id" component={PropertyDetailEnhanced} />
       <Route path="/properties/:id/analysis" component={PropertyAnalysis} />
       <Route path="/comparison" component={Comparison} />
       <Route path="/subscription" component={Subscription} />
