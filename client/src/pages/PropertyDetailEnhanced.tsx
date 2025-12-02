@@ -30,6 +30,10 @@ export default function PropertyDetailEnhanced() {
   const [openExpenseLog, setOpenExpenseLog] = useState<number | null>(null);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [editedValue, setEditedValue] = useState(0);
+  const [editedWeeklyRent, setEditedWeeklyRent] = useState(0);
+  const [editedRentGrowth, setEditedRentGrowth] = useState(0);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   const utils = trpc.useUtils();
   const updateValuationMutation = trpc.valuations.updateCurrent.useMutation({
@@ -39,6 +43,27 @@ export default function PropertyDetailEnhanced() {
     },
     onError: (error: any) => {
       toast.error(`Failed to update: ${error.message}`);
+    },
+  });
+
+  const updateRentalMutation = trpc.rentalIncome.update.useMutation({
+    onSuccess: () => {
+      toast.success("Rental income updated");
+      utils.rentalIncome.getByProperty.invalidate({ propertyId });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update rental: ${error.message}`);
+    },
+  });
+
+  const updatePropertyMutation = trpc.properties.update.useMutation({
+    onSuccess: () => {
+      toast.success("Property name updated");
+      utils.properties.getById.invalidate({ id: propertyId });
+      setIsEditingName(false);
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update property: ${error.message}`);
     },
   });
 
@@ -121,7 +146,46 @@ export default function PropertyDetailEnhanced() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">{property.nickname || property.address}</h1>
+                {isEditingName ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      className="text-2xl font-bold h-auto"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        updatePropertyMutation.mutate({ id: propertyId, data: { nickname: editedName } });
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditingName(false);
+                        setEditedName("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <h1
+                    className="text-2xl font-bold cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={() => {
+                      setIsEditingName(true);
+                      setEditedName(property.nickname || property.address);
+                    }}
+                    title="Click to edit"
+                  >
+                    {property.nickname || property.address}
+                  </h1>
+                )}
                 <p className="text-sm text-gray-600">{property.address}</p>
               </div>
             </div>
@@ -311,7 +375,17 @@ export default function PropertyDetailEnhanced() {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Weekly Rent</Label>
-                  <Input type="number" value={(weeklyRent / 100).toFixed(2)} placeholder="0.00" />
+                  <Input 
+                    type="number" 
+                    value={editedWeeklyRent > 0 ? (editedWeeklyRent / 100).toFixed(2) : (weeklyRent / 100).toFixed(2)} 
+                    onChange={(e) => setEditedWeeklyRent(Math.round(parseFloat(e.target.value || "0") * 100))}
+                    onBlur={() => {
+                      if (editedWeeklyRent > 0 && rental && rental[0]) {
+                        updateRentalMutation.mutate({ id: rental[0].id, weeklyRent: editedWeeklyRent });
+                      }
+                    }}
+                    placeholder="0.00" 
+                  />
                 </div>
                 <div>
                   <Label>Annual Rent</Label>
@@ -319,7 +393,17 @@ export default function PropertyDetailEnhanced() {
                 </div>
                 <div>
                   <Label>Rent Growth Rate (%)</Label>
-                  <Input type="number" defaultValue="3" step="0.1" />
+                  <Input 
+                    type="number" 
+                    value={editedRentGrowth > 0 ? editedRentGrowth / 100 : (rental && rental[0] ? rental[0].growthRate / 100 : 3)} 
+                    onChange={(e) => setEditedRentGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
+                    onBlur={() => {
+                      if (editedRentGrowth > 0 && rental && rental[0]) {
+                        updateRentalMutation.mutate({ id: rental[0].id, growthRate: editedRentGrowth });
+                      }
+                    }}
+                    step="0.1" 
+                  />
                 </div>
               </CardContent>
             </Card>

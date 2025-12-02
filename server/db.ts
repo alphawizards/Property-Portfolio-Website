@@ -351,6 +351,13 @@ export async function getRentalIncome(propertyId: number) {
   return await db.select().from(rentalIncome).where(eq(rentalIncome.propertyId, propertyId)).orderBy(desc(rentalIncome.startDate));
 }
 
+export async function updateRentalIncome(incomeId: number, updates: Partial<InsertRentalIncome>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(rentalIncome).set(updates).where(eq(rentalIncome.id, incomeId));
+}
+
 export async function deleteRentalIncome(incomeId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

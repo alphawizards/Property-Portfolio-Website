@@ -269,3 +269,37 @@
 - [ ] Commit all project files
 - [ ] Push to GitHub repository
 - [ ] Verify repository is accessible
+
+
+## Make All Fields Editable & Data Connected
+
+### Rental Income Editable
+- [x] Make Weekly Rent input field save changes to database
+- [x] Add save button or auto-save on blur for rental income
+- [x] Update cashflow summary when rental income changes (auto via query invalidation)
+- [x] Update 12-month cashflow chart when rental income changes (auto via query invalidation)
+- [x] Add rent growth rate save functionality
+
+### Property Name Editable
+- [x] Make property name in header clickable to edit
+- [x] Add inline edit mode with save/cancel buttons
+- [x] Save property name changes to database
+- [x] Update property list on dashboard when name changes
+
+### Auto-Create Expense Logs
+- [ ] Modify property creation to auto-create expense log
+- [ ] Add default expense log when property is added
+- [ ] Ensure all existing properties have expense logs
+- [ ] Backfill expense logs for test properties
+
+### Loans Editable
+- [ ] Add edit button to existing loan cards
+- [ ] Create loan edit modal or inline edit mode
+- [ ] Save loan changes (amount, rate, term, type)
+- [ ] Update total debt and LVR when loans change
+
+### Data Flow Verification
+- [ ] Test rental income → cashflow summary → 12-month chart
+- [ ] Test expense log save → weekly expenses → cashflow chart
+- [ ] Test loan edits → total debt → LVR → portfolio summary
+- [ ] Test property name edit → dashboard property list

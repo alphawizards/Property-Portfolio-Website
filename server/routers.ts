@@ -418,6 +418,26 @@ export const appRouter = router({
         return { id };
       }),
 
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().int(),
+          weeklyRent: z.number().optional(),
+          growthRate: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const updates: Partial<{ amount: number; growthRate: number }> = {};
+        if (input.weeklyRent !== undefined) {
+          updates.amount = input.weeklyRent;
+        }
+        if (input.growthRate !== undefined) {
+          updates.growthRate = input.growthRate;
+        }
+        await db.updateRentalIncome(input.id, updates);
+        return { success: true };
+      }),
+
     delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input }) => {
       await db.deleteRentalIncome(input.id);
       return { success: true };

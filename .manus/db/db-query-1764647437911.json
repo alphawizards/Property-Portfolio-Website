@@ -1,0 +1,19 @@
+{
+  "query": "SELECT * FROM rental_income WHERE propertyId = 5 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2pPx8qVnbvy6Wej.root --database ZHDkc5zZkKVVfPhNqnZbpD --execute SELECT * FROM rental_income WHERE propertyId = 5 LIMIT 1;",
+  "rows": [
+    {
+      "id": "2",
+      "propertyId": "5",
+      "startDate": "2020-02-01 00:00:00",
+      "endDate": "NULL",
+      "amount": "65000",
+      "frequency": "Weekly",
+      "growthRate": "300"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tpropertyId\tstartDate\tendDate\tamount\tfrequency\tgrowthRate\n2\t5\t2020-02-01 00:00:00\tNULL\t65000\tWeekly\t300\n",
+  "stderr": "",
+  "execution_time_ms": 1605
+}

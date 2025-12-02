@@ -1,0 +1,66 @@
+{
+  "query": "DESCRIBE rental_income;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2pPx8qVnbvy6Wej.root --database ZHDkc5zZkKVVfPhNqnZbpD --execute DESCRIBE rental_income;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "propertyId",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "startDate",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "endDate",
+      "Type": "datetime",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "amount",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "frequency",
+      "Type": "enum('Monthly','Weekly','Fortnightly')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "Monthly",
+      "Extra": ""
+    },
+    {
+      "Field": "growthRate",
+      "Type": "int(11)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint(11)\tNO\tPRI\tNULL\tauto_increment\npropertyId\tint(11)\tNO\t\tNULL\t\nstartDate\tdatetime\tNO\t\tNULL\t\nendDate\tdatetime\tYES\t\tNULL\t\namount\tint(11)\tNO\t\tNULL\t\nfrequency\tenum('Monthly','Weekly','Fortnightly')\tNO\t\tMonthly\t\ngrowthRate\tint(11)\tNO\t\t0\t\n",
+  "stderr": "",
+  "execution_time_ms": 1616
+}
