@@ -148,6 +148,8 @@ export default function PropertyDetailEnhanced() {
   const totalDebt = loans?.reduce((sum, loan) => sum + loan.currentAmount, 0) || 0;
   const currentValue = valuations?.[0]?.value || property.purchasePrice;
   const equity = currentValue - totalDebt;
+  const purchasePrice = property.purchasePrice;
+  const roi = purchasePrice > 0 ? ((currentValue - purchasePrice) / purchasePrice) * 100 : 0;
   
   // Calculate weekly rental income
   const weeklyRent = rental?.[0]?.amount || 0;
@@ -462,8 +464,14 @@ export default function PropertyDetailEnhanced() {
             </CardContent>
           </Card>
 
-          {/* Financials Overview */}
-          <div className="grid md:grid-cols-4 gap-4">
+          {/* Financials Overview - Row 1: Purchase Price, Current Value, ROI */}
+          <div className="grid md:grid-cols-3 gap-4 mb-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600 mb-1">Purchase Price</div>
+                <div className="text-2xl font-bold text-gray-700">{formatCurrency(purchasePrice)}</div>
+              </CardContent>
+            </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-gray-600 mb-1">Current Value</div>
@@ -513,9 +521,20 @@ export default function PropertyDetailEnhanced() {
                   >
                     {formatCurrency(currentValue)}
                   </div>
-                )}
+                )}              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-sm text-gray-600 mb-1">ROI (Capital Gain)</div>
+                <div className={`text-2xl font-bold ${roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
+                </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Financials Overview - Row 2: Total Debt, Equity, LVR */}
+          <div className="grid md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-gray-600 mb-1">Total Debt</div>

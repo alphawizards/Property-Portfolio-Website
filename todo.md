@@ -545,3 +545,16 @@
 - [x] Replace native browser confirm() with styled AlertDialog component
 - [x] Test deletion reduces portfolio count from 4 to 3 properties
 - [x] Verify portfolio values update correctly after deletion
+
+
+## Add Purchase Price and ROI Cards (User Requested)
+
+- [x] Add Purchase Price card to financial metrics section
+- [x] Display purchase price from property data
+- [x] Add ROI (Return on Investment) card showing capital gain percentage
+- [x] Calculate ROI as ((Current Value - Purchase Price) / Purchase Price) × 100
+- [x] Format ROI as percentage with 2 decimal places
+- [x] Add appropriate color coding (green for positive, red for negative ROI)
+- [x] Test ROI calculation with Brisbane Investment: $655k purchase → $900k current = +37.40% ROI
+- [x] Verify all cards display correctly on property detail page
+- [x] Reorganize cards into two rows: Row 1 (Purchase/Value/ROI), Row 2 (Debt/Equity/LVR)
