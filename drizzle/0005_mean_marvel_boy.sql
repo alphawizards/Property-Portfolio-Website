@@ -1,0 +1,1 @@
+ALTER TABLE `expense_breakdown` ADD `frequency` enum('Weekly','Monthly','Quarterly','Annually') DEFAULT 'Annually' NOT NULL;

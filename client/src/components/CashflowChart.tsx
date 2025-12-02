@@ -14,19 +14,21 @@ export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage }: C
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   ];
 
-  const monthlyRent = weeklyRent * 52 / 12;
-  const monthlyExpenses = weeklyExpenses * 52 / 12;
+  // Convert weekly cents to monthly cents
+  const monthlyRent = Math.round(weeklyRent * 52 / 12);
+  const monthlyExpenses = Math.round(weeklyExpenses * 52 / 12);
 
   const data = months.map((month) => ({
     month,
-    income: Math.round(monthlyRent),
-    expenses: Math.round(monthlyExpenses),
-    mortgage: Math.round(monthlyMortgage),
-    netCashflow: Math.round(monthlyRent - monthlyExpenses - monthlyMortgage),
+    income: monthlyRent,
+    expenses: monthlyExpenses,
+    mortgage: monthlyMortgage,
+    netCashflow: monthlyRent - monthlyExpenses - monthlyMortgage,
   }));
 
   const formatCurrency = (value: number) => {
-    return `$${(value / 1000).toFixed(1)}k`;
+    // Value is in cents, convert to dollars then to thousands
+    return `$${(value / 100 / 1000).toFixed(1)}k`;
   };
 
   return (
@@ -94,20 +96,20 @@ export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage }: C
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-sm text-muted-foreground">Monthly Income</div>
-            <div className="text-2xl font-bold text-green-600">${monthlyRent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div className="text-2xl font-bold text-green-600">${(monthlyRent / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Monthly Expenses</div>
-            <div className="text-2xl font-bold text-amber-600">-${monthlyExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div className="text-2xl font-bold text-amber-600">-${(monthlyExpenses / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Monthly Mortgage</div>
-            <div className="text-2xl font-bold text-red-600">-${monthlyMortgage.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div className="text-2xl font-bold text-red-600">-${(monthlyMortgage / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Net Monthly Cashflow</div>
             <div className={`text-2xl font-bold ${monthlyRent - monthlyExpenses - monthlyMortgage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${(monthlyRent - monthlyExpenses - monthlyMortgage).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              ${((monthlyRent - monthlyExpenses - monthlyMortgage) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
           </div>
         </div>

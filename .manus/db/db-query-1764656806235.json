@@ -1,0 +1,9 @@
+{
+  "query": "\nINSERT INTO expense_breakdown (expenseLogId, category, amount, frequency) VALUES\n(1, 'Council Rates', 200000, 'Annually'),\n(1, 'Water Rates', 10000, 'Quarterly'),\n(1, 'Building Insurance', 150000, 'Annually'),\n(1, 'Property Management Fees', 2000, 'Weekly'),\n(1, 'Repairs & Maintenance', 5000, 'Monthly');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2pPx8qVnbvy6Wej.root --database ZHDkc5zZkKVVfPhNqnZbpD --execute \nINSERT INTO expense_breakdown (expenseLogId, category, amount, frequency) VALUES\n(1, 'Council Rates', 200000, 'Annually'),\n(1, 'Water Rates', 10000, 'Quarterly'),\n(1, 'Building Insurance', 150000, 'Annually'),\n(1, 'Property Management Fees', 2000, 'Weekly'),\n(1, 'Repairs & Maintenance', 5000, 'Monthly');\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1587
+}

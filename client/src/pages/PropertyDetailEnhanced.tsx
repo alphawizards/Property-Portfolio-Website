@@ -26,6 +26,10 @@ export default function PropertyDetailEnhanced() {
   const { data: expenses } = trpc.expenses.getByProperty.useQuery({ propertyId });
   const { data: valuations } = trpc.valuations.getByProperty.useQuery({ propertyId });
   const { data: growthRates } = trpc.growthRates.getByProperty.useQuery({ propertyId });
+  const { data: expenseBreakdown } = trpc.expenses.getBreakdown.useQuery(
+    { expenseLogId: expenses?.[0]?.id || 0 },
+    { enabled: !!expenses?.[0]?.id }
+  );
 
   const [openExpenseLog, setOpenExpenseLog] = useState<number | null>(null);
   const [isEditingValue, setIsEditingValue] = useState(false);
@@ -64,13 +68,23 @@ export default function PropertyDetailEnhanced() {
     },
   });
 
+  const createRentalMutation = trpc.rentalIncome.add.useMutation({
+    onSuccess: () => {
+      toast.success("Rental income created");
+      utils.rentalIncome.getByProperty.invalidate({ propertyId });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to create rental income: ${error.message}`);
+    },
+  });
+
   const updateRentalMutation = trpc.rentalIncome.update.useMutation({
     onSuccess: () => {
       toast.success("Rental income updated");
       utils.rentalIncome.getByProperty.invalidate({ propertyId });
     },
     onError: (error: any) => {
-      toast.error(`Failed to update: ${error.message}`);
+      toast.error(`Failed to update rental income: ${error.message}`);
     },
   });
   
@@ -119,9 +133,25 @@ export default function PropertyDetailEnhanced() {
   const weeklyRent = rental?.[0]?.amount || 0;
   const annualRent = weeklyRent * 52;
   
-  // Calculate weekly expenses
-  const monthlyExpenses = expenses?.[0]?.totalAmount || 0;
-  const weeklyExpenses = (monthlyExpenses * 12) / 52;
+  // Calculate weekly expenses from breakdown with frequency
+  const convertToWeekly = (amount: number, frequency: string) => {
+    switch (frequency) {
+      case "Weekly":
+        return amount;
+      case "Monthly":
+        return Math.round(amount / 4.33); // Average weeks per month
+      case "Quarterly":
+        return Math.round(amount / 13); // 13 weeks per quarter
+      case "Annually":
+        return Math.round(amount / 52); // 52 weeks per year
+      default:
+        return amount;
+    }
+  };
+  
+  const weeklyExpenses = expenseBreakdown?.reduce((total, item) => {
+    return total + convertToWeekly(item.amount, item.frequency);
+  }, 0) || 0;
   
   // Calculate monthly mortgage payments
   const calculateMonthlyPayment = (principal: number, annualRate: number, years: number) => {
@@ -132,12 +162,12 @@ export default function PropertyDetailEnhanced() {
   };
   
   const totalMonthlyMortgage = loans?.reduce((sum, loan) => {
-    const monthlyPayment = calculateMonthlyPayment(
+    const monthlyPaymentDollars = calculateMonthlyPayment(
       loan.currentAmount / 100, // Convert cents to dollars
       loan.interestRate / 100, // Convert basis points to percentage
       loan.remainingTermYears
     );
-    return sum + monthlyPayment;
+    return sum + Math.round(monthlyPaymentDollars * 100); // Convert back to cents
   }, 0) || 0;
   
   // Weekly cashflow (excluding mortgage)
@@ -540,8 +570,20 @@ export default function PropertyDetailEnhanced() {
                     value={editedWeeklyRent > 0 ? (editedWeeklyRent / 100).toFixed(2) : (weeklyRent / 100).toFixed(2)} 
                     onChange={(e) => setEditedWeeklyRent(Math.round(parseFloat(e.target.value || "0") * 100))}
                     onBlur={() => {
-                      if (editedWeeklyRent > 0 && rental && rental[0]) {
-                        updateRentalMutation.mutate({ id: rental[0].id, weeklyRent: editedWeeklyRent });
+                      if (editedWeeklyRent > 0) {
+                        if (rental && rental[0]) {
+                          updateRentalMutation.mutate({ id: rental[0].id, weeklyRent: editedWeeklyRent });
+                        } else {
+                          createRentalMutation.mutate({
+                            propertyId,
+                            income: {
+                              startDate: property?.purchaseDate || new Date(),
+                              amount: editedWeeklyRent,
+                              frequency: "Weekly" as const,
+                              growthRate: 300, // Default 3%
+                            },
+                          });
+                        }
                       }
                     }}
                     placeholder="0.00" 

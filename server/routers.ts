@@ -88,6 +88,7 @@ const expenseLogSchema = z.object({
 const expenseBreakdownSchema = z.object({
   category: z.string().min(1, "Category is required"),
   amount: z.number().int().positive("Amount must be positive"),
+  frequency: z.enum(["Weekly", "Monthly", "Quarterly", "Annually"]).default("Annually"),
 });
 
 const depreciationScheduleSchema = z.object({

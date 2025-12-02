@@ -23,6 +23,7 @@ import {
   InsertExpenseLog,
   expenseBreakdown,
   InsertExpenseBreakdown,
+  ExpenseBreakdown,
   depreciationSchedule,
   InsertDepreciationSchedule,
   capitalExpenditure,
@@ -405,6 +406,38 @@ export async function getExpenseBreakdown(expenseLogId: number) {
   if (!db) return [];
 
   return await db.select().from(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseLogId));
+}
+
+/**
+ * Convert expense amount to weekly value based on frequency
+ * @param amount Amount in cents
+ * @param frequency Payment frequency
+ * @returns Weekly amount in cents
+ */
+export function convertToWeeklyExpense(amount: number, frequency: "Weekly" | "Monthly" | "Quarterly" | "Annually"): number {
+  switch (frequency) {
+    case "Weekly":
+      return amount;
+    case "Monthly":
+      return Math.round(amount / 4.33); // Average weeks per month
+    case "Quarterly":
+      return Math.round(amount / 13); // 13 weeks per quarter
+    case "Annually":
+      return Math.round(amount / 52); // 52 weeks per year
+    default:
+      return amount;
+  }
+}
+
+/**
+ * Calculate total weekly expenses from breakdown
+ * @param breakdown Array of expense breakdown items
+ * @returns Total weekly expenses in cents
+ */
+export function calculateWeeklyExpenses(breakdown: ExpenseBreakdown[]): number {
+  return breakdown.reduce((total, item) => {
+    return total + convertToWeeklyExpense(item.amount, item.frequency);
+  }, 0);
 }
 
 export async function getExpenseLogById(expenseId: number) {

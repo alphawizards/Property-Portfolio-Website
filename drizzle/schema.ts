@@ -183,6 +183,7 @@ export const expenseBreakdown = mysqlTable("expense_breakdown", {
   expenseLogId: int("expenseLogId").notNull(),
   category: varchar("category", { length: 255 }).notNull(),
   amount: int("amount").notNull(), // in cents
+  frequency: mysqlEnum("frequency", ["Weekly", "Monthly", "Quarterly", "Annually"]).default("Annually").notNull(),
 });
 
 export type ExpenseBreakdown = typeof expenseBreakdown.$inferSelect;

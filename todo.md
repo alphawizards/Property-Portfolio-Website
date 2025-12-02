@@ -426,3 +426,38 @@
 - [ ] Verify LVR calculates correctly (Total Debt / Property Value × 100)
 - [ ] Test on property with no loans (should create new loan)
 - [ ] Test on property with existing loan (should update loan)
+
+
+## Update Rental Income & Expense Log Calculations (User Requested)
+
+### Rental Income Cashflow Calculations
+- [x] Update monthly income calculation to use weekly rent × 52 / 12 formula
+- [x] Ensure cashflow summary shows correct weekly income from rental income
+- [x] Ensure 12-month chart shows correct monthly income values
+- [x] Test with example: $500/week → $2,167/month
+
+### Expense Log Frequency Support
+- [x] Add frequency field to expense_log_breakdowns table (weekly/monthly/quarterly/annually)
+- [x] Update expense breakdown schema with frequency enum
+- [x] Add frequency selector dropdown for each expense category
+- [ ] Update expense log to always show breakdown by default (remove collapse)
+- [x] Calculate weekly expenses based on frequency selection:
+  * Weekly: amount / 1
+  * Monthly: amount / 4.33
+  * Quarterly: amount / 13
+  * Annually: amount / 52
+- [x] Update cashflow summary to derive weekly expenses from breakdown totals
+- [x] Update backend to calculate total weekly expenses from all breakdowns
+
+### Cashflow Chart Updates
+- [x] Update monthly expenses calculation based on frequency
+- [x] Ensure chart shows correct monthly values for all three series (income, expenses, mortgage)
+- [ ] Test chart updates when expense frequencies change
+- [ ] Verify net monthly cashflow calculation is correct
+
+### Testing
+- [x] Test weekly rent input and verify monthly income calculation
+- [x] Test expense frequency selectors for all categories
+- [ ] Test expense breakdown always visible (not collapsed)
+- [ ] Test cashflow summary updates when expenses change
+- [x] Test 12-month chart reflects all changes correctly
