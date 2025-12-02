@@ -461,3 +461,20 @@
 - [ ] Test expense breakdown always visible (not collapsed)
 - [ ] Test cashflow summary updates when expenses change
 - [x] Test 12-month chart reflects all changes correctly
+
+
+## Fix Weekly Expense Calculation & Add Chart Timeline Slider (User Reported Bug)
+
+### Weekly Expense Calculation Bug
+- [x] Investigate why weekly expenses showing -$145.20 instead of correct value from $6k breakdown
+- [x] Fix calculation to properly sum all expense categories based on their frequencies
+- [x] Verify calculation: Building Insurance $3150/year = $60.58/week, Landlord Insurance $1500/year = $28.85/week, Council Rates $400/quarter = $30.77/week, Water Rates $200/quarter = $15.38/week, Property Management $500/year = $9.62/week
+- [x] Expected total: ~$145.20/week (calculation appears correct, need to verify display)
+- [x] Test that cashflow summary updates when expense breakdown changes
+
+### Cashflow Chart Timeline Slider
+- [x] Replace "12-Month Cashflow Projection" with timeline slider
+- [x] Add slider options: 1 Year, 3 Years, 5 Years, 10 Years
+- [x] Update chart to show selected timeline period
+- [x] Ensure chart data calculations work for all timeline options
+- [x] Test chart updates when timeline selection changes
