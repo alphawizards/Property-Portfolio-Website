@@ -389,3 +389,26 @@
 - [x] Document frontend optimization recommendations
 - [x] Document deployment and scaling considerations
 - [x] Create production readiness checklist
+
+
+## Mortgage Calculator Integration (User Requested - Approved Approach)
+
+### Add "Save to Property" Button in Calculator
+- [x] Add "Save to Property" button to LoanCalculator component
+- [x] Wire button to update property valuation from Property Value slider
+- [x] Wire button to update main loan amount from calculator
+- [x] Wire button to update main loan interest rate from calculator
+- [x] Wire button to update loan term from calculator
+- [x] Add success/error toast notifications
+- [x] Add loading state during save operation
+
+### Keep Total Debt & LVR as Calculated Fields
+- [x] Total Debt remains calculated (sum of all loans) - correct approach
+- [x] LVR remains calculated (Total Debt / Property Value × 100) - correct approach
+- [x] Equity = Property Value - Total Debt (verified correct formula)
+
+### Portfolio Integration
+- [x] Test that saved calculator values update property detail page (Total Debt $570k→$620k, Equity $330k→$280k, LVR 63.33%→68.89%)
+- [ ] Verify portfolio summary reflects calculator changes after save
+- [ ] Verify property list shows updated debt after save
+- [ ] Test that 30-year projections use updated parameters

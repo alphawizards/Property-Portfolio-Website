@@ -6,6 +6,9 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { Save } from 'lucide-react';
 import {
   calculateLoanProjections,
   aggregateByYear,
@@ -27,6 +30,7 @@ interface LoanCalculatorProps {
   initialDeposit?: number; // in cents
   initialInterestRate?: number; // in basis points
   initialTerm?: number; // years
+  mainLoanId?: number; // ID of the main loan to update
 }
 
 export function LoanCalculator({
@@ -36,6 +40,7 @@ export function LoanCalculator({
   initialDeposit,
   initialInterestRate = 600, // 6%
   initialTerm = 25,
+  mainLoanId,
 }: LoanCalculatorProps) {
   // Loan parameters
   const [propertyValue, setPropertyValue] = useState(initialPropertyValue);
@@ -141,8 +146,67 @@ export function LoanCalculator({
     return (basisPoints / 100).toFixed(1);
   };
 
+  // Mutations for saving calculator values
+  const utils = trpc.useUtils();
+  const updateValuationMutation = trpc.valuations.updateCurrent.useMutation({
+    onSuccess: () => {
+      utils.properties.getById.invalidate({ id: propertyId });
+      utils.properties.listWithFinancials.invalidate();
+    },
+  });
+
+  const updateLoanMutation = trpc.loans.update.useMutation({
+    onSuccess: () => {
+      utils.properties.getById.invalidate({ id: propertyId });
+      utils.loans.getByProperty.invalidate({ propertyId });
+      utils.properties.listWithFinancials.invalidate();
+    },
+  });
+
+  const handleSaveToProperty = async () => {
+    try {
+      // Update property valuation
+      await updateValuationMutation.mutateAsync({
+        propertyId,
+        value: propertyValue,
+        date: new Date(),
+      });
+
+      // Update main loan if it exists
+      if (mainLoanId) {
+        await updateLoanMutation.mutateAsync({
+          id: mainLoanId,
+          data: {
+            currentAmount: loanAmount,
+            interestRate,
+            remainingTermYears: termYears,
+          },
+        });
+      }
+      
+      toast.success('Calculator values saved to property');
+    } catch (error) {
+      toast.error('Failed to save calculator values');
+      console.error(error);
+    }
+  };
+
+  const isSaving = updateValuationMutation.isPending || updateLoanMutation.isPending;;
+
   return (
     <div className="space-y-6">
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleSaveToProperty}
+          disabled={isSaving}
+          className="gap-2"
+        >
+          <Save className="h-4 w-4" />
+          {isSaving ? 'Saving...' : 'Save to Property'}
+        </Button>
+      </div>
+
       {/* Loan Details Section */}
       <Card>
         <CardHeader>

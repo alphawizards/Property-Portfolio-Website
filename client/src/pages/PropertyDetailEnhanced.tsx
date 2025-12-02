@@ -682,6 +682,7 @@ export default function PropertyDetailEnhanced() {
           initialLoanAmount={totalDebt}
           initialDeposit={currentValue - totalDebt}
           initialInterestRate={loans?.[0]?.interestRate || 600}
+          mainLoanId={loans?.[0]?.id}
           initialTerm={loans?.[0]?.remainingTermYears || 25}
         />
       </div>
