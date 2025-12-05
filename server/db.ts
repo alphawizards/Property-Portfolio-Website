@@ -3,6 +3,8 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
   users,
+  portfolios,
+  InsertPortfolio,
   properties,
   InsertProperty,
   propertyOwnership,
@@ -120,6 +122,52 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
+}
+
+// ============ PORTFOLIO OPERATIONS ============
+
+export async function createPortfolio(portfolio: InsertPortfolio) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(portfolios).values(portfolio);
+  return result[0].insertId;
+}
+
+export async function getPortfoliosByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.select().from(portfolios).where(eq(portfolios.userId, userId));
+}
+
+export async function getPortfolioById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const results = await db.select().from(portfolios).where(eq(portfolios.id, id));
+  return results[0] || null;
+}
+
+export async function updatePortfolio(id: number, data: Partial<InsertPortfolio>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(portfolios).set(data).where(eq(portfolios.id, id));
+}
+
+export async function deletePortfolio(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(portfolios).where(eq(portfolios.id, id));
+}
+
+export async function getPropertiesByPortfolioId(portfolioId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.select().from(properties).where(eq(properties.portfolioId, portfolioId));
 }
 
 // ============ PROPERTY OPERATIONS ============

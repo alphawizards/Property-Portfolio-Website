@@ -10,6 +10,12 @@ import { subscriptionRouter } from "./subscription-router";
 
 // ============ VALIDATION SCHEMAS ============
 
+const portfolioSchema = z.object({
+  name: z.string().min(1, "Portfolio name is required"),
+  type: z.enum(["Normal", "Trust", "Company"]).default("Normal"),
+  description: z.string().optional(),
+});
+
 const propertySchema = z.object({
   nickname: z.string().min(1, "Property nickname is required"),
   address: z.string().min(1, "Address is required"),
@@ -121,6 +127,77 @@ export const appRouter = router({
       return {
         success: true,
       } as const;
+    }),
+  }),
+
+  // ============ PORTFOLIO OPERATIONS ============
+  portfolios: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await db.getPortfoliosByUserId(ctx.user.id);
+    }),
+
+    getById: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
+      const portfolio = await db.getPortfolioById(input.id);
+      if (!portfolio) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portfolio not found" });
+      }
+      if (portfolio.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
+      }
+      return portfolio;
+    }),
+
+    getWithProperties: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
+      const portfolio = await db.getPortfolioById(input.id);
+      if (!portfolio) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portfolio not found" });
+      }
+      if (portfolio.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
+      }
+      const properties = await db.getPropertiesByPortfolioId(input.id);
+      return { ...portfolio, properties };
+    }),
+
+    create: protectedProcedure.input(portfolioSchema).mutation(async ({ input, ctx }) => {
+      const portfolioId = await db.createPortfolio({
+        ...input,
+        userId: ctx.user.id,
+      });
+      return { id: portfolioId };
+    }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number().int(),
+          data: portfolioSchema,
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const portfolio = await db.getPortfolioById(input.id);
+        if (!portfolio || portfolio.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
+        }
+        await db.updatePortfolio(input.id, input.data);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ input, ctx }) => {
+      const portfolio = await db.getPortfolioById(input.id);
+      if (!portfolio || portfolio.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
+      }
+      // Check if portfolio has properties
+      const properties = await db.getPropertiesByPortfolioId(input.id);
+      if (properties.length > 0) {
+        throw new TRPCError({ 
+          code: "PRECONDITION_FAILED", 
+          message: "Cannot delete portfolio with properties. Please move or delete properties first." 
+        });
+      }
+      await db.deletePortfolio(input.id);
+      return { success: true };
     }),
   }),
 

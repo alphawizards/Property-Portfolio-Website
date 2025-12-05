@@ -24,11 +24,28 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Portfolios table - stores portfolio groupings of properties
+ */
+export const portfolios = mysqlTable("portfolios", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: mysqlEnum("type", ["Normal", "Trust", "Company"]).default("Normal").notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Portfolio = typeof portfolios.$inferSelect;
+export type InsertPortfolio = typeof portfolios.$inferInsert;
+
+/**
  * Properties table - stores core property information
  */
 export const properties = mysqlTable("properties", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  portfolioId: int("portfolioId"),
   nickname: varchar("nickname", { length: 255 }).notNull(),
   address: text("address").notNull(),
   state: varchar("state", { length: 100 }).notNull(),

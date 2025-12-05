@@ -558,3 +558,107 @@
 - [x] Test ROI calculation with Brisbane Investment: $655k purchase → $900k current = +37.40% ROI
 - [x] Verify all cards display correctly on property detail page
 - [x] Reorganize cards into two rows: Row 1 (Purchase/Value/ROI), Row 2 (Debt/Equity/LVR)
+
+
+## Zapiio Architecture Enhancement (Major Feature Implementation)
+
+### Phase 1: Portfolio Entity & Data Migration
+- [x] Add Portfolio table to database schema (id, user_id, name, type, description, created_at, updated_at)
+- [x] Add portfolio_id foreign key to properties table
+- [x] Create migration script to move existing properties to default portfolios
+- [x] Update Drizzle schema with Portfolio entity and relationships
+- [x] Run database migration with `pnpm db:push`
+- [x] Successfully migrated 2 existing properties to default portfolio
+
+### Phase 2: Backend API - Portfolio Management
+- [x] Create portfolio CRUD procedures in server/routers.ts
+- [x] Implement portfolios.list (get all portfolios for user)
+- [x] Implement portfolios.create (create new portfolio)
+- [x] Implement portfolios.getById (get portfolio with properties)
+- [x] Implement portfolios.getWithProperties (get portfolio with all properties)
+- [x] Implement portfolios.update (update portfolio details)
+- [x] Implement portfolios.delete (delete portfolio and handle properties)
+- [x] Add portfolio ownership validation in all procedures
+- [x] Create comprehensive test suite (13 tests, all passing)
+- [x] Verify CRUD operations, access control, and validation
+
+### Phase 3: Enhanced Financial Calculations
+- [ ] Create portfolio-level calculation helpers in server/db.ts
+- [ ] Calculate Portfolio Value (sum of all property values)
+- [ ] Calculate Total Debt (sum of all loan amounts)
+- [ ] Calculate Total Equity (Portfolio Value - Total Debt)
+- [ ] Calculate Portfolio LVR (Total Debt / Portfolio Value × 100)
+- [ ] Calculate Usable Equity (80% LVR rule for Australian market)
+- [ ] Calculate Max Borrowing Capacity (based on income and debt)
+- [ ] Calculate Remaining Borrowing Capacity
+- [ ] Calculate Portfolio Cashflow (aggregate all property cashflows)
+- [ ] Implement multi-year projection engine (30+ years)
+
+### Phase 4: Dashboard API Endpoint
+- [ ] Create portfolios.getDashboard procedure
+- [ ] Return all calculated metrics in single API call
+- [ ] Include property-level breakdowns
+- [ ] Include loan-level details
+- [ ] Include cashflow analysis per property
+- [ ] Include multi-year projections data
+- [ ] Optimize query performance with proper joins
+
+### Phase 5: Frontend - Portfolio Management UI
+- [ ] Create PortfolioList page component
+- [ ] Create PortfolioCreate dialog/form
+- [ ] Create PortfolioSelector dropdown component
+- [ ] Update Dashboard to be portfolio-scoped
+- [ ] Add portfolio switcher to navigation
+- [ ] Update property forms to include portfolio selection
+- [ ] Handle portfolio deletion with property reassignment
+
+### Phase 6: Enhanced Dashboard Visualization
+- [ ] Update Dashboard to fetch from portfolios.getDashboard
+- [ ] Display portfolio-level KPI cards (Properties, Value, Debt, Equity, Goal)
+- [ ] Add portfolio comparison view (if multiple portfolios)
+- [ ] Enhance equity chart with portfolio-level data
+- [ ] Add borrowing capacity visualization
+- [ ] Add usable equity indicator
+- [ ] Implement view toggles (Equity/Cashflow/Debt)
+- [ ] Add projection timeframe selector (10/20/30/50 years)
+
+### Phase 7: Scenario Planning Feature
+- [ ] Add Scenario table to database (id, portfolio_id, name, description, created_at)
+- [ ] Add is_actual flag to distinguish actual vs scenario data
+- [ ] Create scenario CRUD procedures
+- [ ] Implement scenario.clone (copy portfolio to new scenario)
+- [ ] Create ScenarioList component
+- [ ] Create ScenarioComparison component
+- [ ] Add scenario selector to dashboard
+- [ ] Implement side-by-side scenario comparison charts
+- [ ] Add "what-if" analysis tools
+
+### Phase 8: Advanced Features
+- [ ] Add income tracking (for borrowing capacity calculations)
+- [ ] Add savings tracking (cumulative savings over time)
+- [ ] Implement goal setting and tracking
+- [ ] Add property sale date support and projections
+- [ ] Implement capital gains tax calculations (Australian rules)
+- [ ] Add rental growth rate projections
+- [ ] Add expense growth rate projections
+- [ ] Implement loan principal reduction over time
+
+### Phase 9: Testing & Validation
+- [ ] Write vitest tests for portfolio CRUD operations
+- [ ] Write vitest tests for financial calculation engine
+- [ ] Test portfolio dashboard endpoint
+- [ ] Test scenario creation and comparison
+- [ ] Test data migration from old to new schema
+- [ ] Verify all calculations match Zapiio logic
+- [ ] Test multi-portfolio user workflows
+- [ ] End-to-end testing of complete user journey
+
+### Phase 10: UI/UX Polish
+- [ ] Ensure dark theme consistency across all new components
+- [ ] Add loading states for dashboard calculations
+- [ ] Add empty states for no portfolios/properties
+- [ ] Implement error handling and user feedback
+- [ ] Add tooltips explaining financial metrics
+- [ ] Optimize chart rendering performance
+- [ ] Ensure mobile responsiveness
+- [ ] Add keyboard shortcuts for power users
