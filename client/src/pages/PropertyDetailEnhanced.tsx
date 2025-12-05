@@ -74,6 +74,7 @@ export default function PropertyDetailEnhanced() {
   });
   const [editedWeeklyRent, setEditedWeeklyRent] = useState(0);
   const [editedRentGrowth, setEditedRentGrowth] = useState(0);
+  const [editedExpenseGrowth, setEditedExpenseGrowth] = useState(0);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
 
@@ -105,6 +106,16 @@ export default function PropertyDetailEnhanced() {
     },
     onError: (error: any) => {
       toast.error(`Failed to update rental income: ${error.message}`);
+    },
+  });
+  
+  const updateExpenseMutation = trpc.expenses.update.useMutation({
+    onSuccess: () => {
+      toast.success("Expense growth rate updated");
+      utils.expenses.getByProperty.invalidate({ propertyId });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update expense: ${error.message}`);
     },
   });
   
@@ -663,6 +674,20 @@ export default function PropertyDetailEnhanced() {
                     onBlur={() => {
                       if (editedRentGrowth > 0 && rental && rental[0]) {
                         updateRentalMutation.mutate({ id: rental[0].id, growthRate: editedRentGrowth });
+                      }
+                    }}
+                    step="0.1" 
+                  />
+                </div>
+                <div>
+                  <Label>Expense Growth Rate (%)</Label>
+                  <Input 
+                    type="number" 
+                    value={editedExpenseGrowth > 0 ? editedExpenseGrowth / 100 : (expenses && expenses[0] ? expenses[0].growthRate / 100 : 3)} 
+                    onChange={(e) => setEditedExpenseGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
+                    onBlur={() => {
+                      if (editedExpenseGrowth > 0 && expenses && expenses[0]) {
+                        updateExpenseMutation.mutate({ id: expenses[0].id, growthRate: editedExpenseGrowth });
                       }
                     }}
                     step="0.1" 

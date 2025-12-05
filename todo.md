@@ -807,3 +807,12 @@
 - [x] Add "Reset to Property Rates" button that appears when override is active
 - [x] Test with various growth rates (0%, 10%, 15%) to verify calculations and visual impact
 - [x] Verified chart updates correctly showing flat expenses at 0% and steep growth at 15%
+
+## Property Detail Expense Growth Rate Field (Completed)
+
+- [x] Add "Expense Growth Rate (%)" field below "Rent Growth Rate (%)" in PropertyDetailEnhanced rental income section
+- [x] Fetch current expense growth rate from expense log data (displays 3% by default)
+- [x] Create mutation to update expense growth rate when field value changes (updateExpenseMutation)
+- [x] Ensure field updates trigger cashflow chart recalculation (onBlur triggers mutation and invalidates queries)
+- [x] Test field with 10% value and verify chart updates correctly (expense area grows over 10-year projection)
+- [x] Field uses same pattern as rent growth rate field (step 0.1, converts to basis points)
