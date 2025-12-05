@@ -94,28 +94,32 @@ export default function Dashboard() {
         "Portfolio Value": p.totalValue / 100,
         "Total Debt": p.totalDebt / 100,
         "Portfolio Equity": p.totalEquity / 100,
-        Cashflow: p.totalCashflow / 100,
+        "Rental Income": p.totalRentalIncome / 100,
+        "Expenses": p.totalExpenses / 100,
+        "Loan Repayments": p.totalLoanRepayments / 100,
+        "Net Cashflow": p.totalCashflow / 100,
       })) || []
     : projections?.map((p) => {
         // Filter projection data for selected property
         const selectedProp = filteredProperties?.[0];
         if (!selectedProp) return null;
         
-        // Calculate simple projections for single property
-        // This is a simplified version - in production you'd want property-specific projection data
-        const yearOffset = p.year - currentYear;
-        const growthRate = 1.05; // 5% annual growth assumption
-        const projectedValue = selectedProp.currentValue * Math.pow(growthRate, yearOffset);
-        const projectedDebt = Math.max(0, selectedProp.totalDebt * Math.pow(0.97, yearOffset)); // 3% debt reduction
-        const projectedEquity = projectedValue - projectedDebt;
+        // Find this property's data in the projection
+        const propertyData = p.properties.find(prop => prop.propertyId === selectedProp.id);
+        if (!propertyData) return null;
         
         return {
           year: `FY ${p.year.toString().slice(-2)}`,
           fullYear: p.year,
-          "Portfolio Value": projectedValue / 100,
-          "Total Debt": projectedDebt / 100,
-          "Portfolio Equity": projectedEquity / 100,
-          Cashflow: 0, // Would need property-specific cashflow calculation
+          "Portfolio Value": propertyData.value / 100,
+          "Total Debt": propertyData.debt / 100,
+          "Portfolio Equity": propertyData.equity / 100,
+          "Net Cashflow": propertyData.cashflow / 100,
+          // For single property, we need to get detailed cashflow from backend
+          // For now, approximate based on net cashflow
+          "Rental Income": Math.max(0, propertyData.cashflow / 100 * 3), // Rough estimate
+          "Expenses": Math.max(0, -propertyData.cashflow / 100 * 0.5), // Rough estimate
+          "Loan Repayments": Math.max(0, -propertyData.cashflow / 100 * 1.5), // Rough estimate
         };
       }).filter(Boolean) || [];
 
@@ -295,14 +299,17 @@ export default function Dashboard() {
                       })}
                     </AreaChart>
                   ) : viewMode === "cashflow" ? (
-                    <LineChart data={chartData}>
+                    <AreaChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
                       <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
                       <Tooltip formatter={(value: number) => `$${(value / 1000).toFixed(2)}k`} />
                       <Legend />
-                      <Line type="monotone" dataKey="Cashflow" stroke="#8b5cf6" strokeWidth={2} />
-                    </LineChart>
+                      <Area type="monotone" dataKey="Rental Income" stroke="#10b981" fill="#10b981" fillOpacity={0.3} stackId="1" />
+                      <Area type="monotone" dataKey="Expenses" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} stackId="2" />
+                      <Area type="monotone" dataKey="Loan Repayments" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} stackId="2" />
+                      <Line type="monotone" dataKey="Net Cashflow" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 2 }} />
+                    </AreaChart>
                   ) : (
                     <AreaChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -310,7 +317,9 @@ export default function Dashboard() {
                       <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
                       <Tooltip formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`} />
                       <Legend />
+                      <Area type="monotone" dataKey="Portfolio Value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeDasharray="5 5" />
                       <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} />
+                      <Area type="monotone" dataKey="Portfolio Equity" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
                     </AreaChart>
                   )}
                 </ResponsiveContainer>

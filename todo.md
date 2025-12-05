@@ -689,3 +689,48 @@
 - [x] Test Brisbane Investment: shows $900k value, $670k debt, $230k equity ✅
 - [x] Test Test Property: shows $750k value, $694k debt, $56k equity ✅
 - [x] Test All Properties: shows $1.65m value, $1.36m debt, $286k equity ✅
+
+
+## Cashflow and Debt Chart Views (User Requested)
+
+### Cashflow Chart Implementation
+- [ ] Implement Cashflow tab chart showing rental income over time
+- [ ] Add expenses projection line to Cashflow chart
+- [ ] Add net cashflow (income - expenses) area visualization
+- [ ] Apply property filtering to Cashflow chart data
+- [ ] Add growth rates to income and expense projections
+- [ ] Test Cashflow chart with single property selection
+- [ ] Test Cashflow chart with "All Properties" aggregation
+
+### Debt Chart Implementation
+- [ ] Implement Debt tab chart showing loan balance over time
+- [ ] Calculate P&I loan principal reduction projections
+- [ ] Show stable debt line for Interest Only loans
+- [ ] Handle mixed loan types (some IO, some P&I) in aggregation
+- [ ] Apply property filtering to Debt chart data
+- [ ] Add loan payoff milestones/markers on chart
+- [ ] Test Debt chart with single property selection
+- [ ] Test Debt chart with "All Properties" aggregation
+
+### Chart Integration
+- [ ] Ensure all three tabs (Equity/Cashflow/Debt) work with property selector
+- [ ] Ensure all three tabs work with time period selector (10/20/30/50 years)
+- [ ] Add appropriate colors and legends for each chart type
+- [ ] Verify chart responsiveness and mobile display
+
+
+## Cashflow and Debt Chart Views (User Requested)
+
+- [x] Enhance backend PortfolioProjection interface to include detailed cashflow breakdown
+- [x] Add rentalIncome, loanRepayments, expenses fields to projection data
+- [x] Update generatePortfolioProjections to calculate and return detailed cashflow
+- [x] Implement Cashflow chart showing income vs expenses over time
+- [x] Show rental income (green), expenses (orange), loan repayments (pink), net cashflow (line)
+- [x] Implement Debt chart showing loan balance reduction over time
+- [x] Show total debt decreasing for P&I loans vs stable for IO loans
+- [x] Show property value growth and equity increase
+- [x] Test Cashflow chart with All Properties (aggregated data) ✅
+- [x] Test Cashflow chart with single property (Brisbane Investment) ✅
+- [x] Test Debt chart with All Properties (aggregated data) ✅
+- [x] Test Debt chart with single property (Brisbane Investment) ✅
+- [x] Verify charts update correctly when switching between properties ✅

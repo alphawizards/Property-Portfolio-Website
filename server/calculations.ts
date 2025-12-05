@@ -411,6 +411,9 @@ export interface PortfolioProjection {
   totalDebt: number;
   totalEquity: number;
   totalCashflow: number;
+  totalRentalIncome: number;
+  totalExpenses: number;
+  totalLoanRepayments: number;
   properties: PropertyProjection[];
 }
 
@@ -464,6 +467,9 @@ export function generatePortfolioProjections(propertiesData: any[], startYear: n
     let totalDebt = 0;
     let totalEquity = 0;
     let totalCashflow = 0;
+    let totalRentalIncome = 0;
+    let totalExpenses = 0;
+    let totalLoanRepayments = 0;
     const properties: PropertyProjection[] = [];
 
     for (const data of propertiesData) {
@@ -474,6 +480,9 @@ export function generatePortfolioProjections(propertiesData: any[], startYear: n
       totalDebt += equity.totalDebt;
       totalEquity += equity.equity;
       totalCashflow += cashflow.netCashflow;
+      totalRentalIncome += cashflow.rentalIncome;
+      totalExpenses += cashflow.expenses;
+      totalLoanRepayments += cashflow.loanRepayments;
 
       properties.push({
         propertyId: data.property.id,
@@ -492,6 +501,9 @@ export function generatePortfolioProjections(propertiesData: any[], startYear: n
       totalDebt,
       totalEquity,
       totalCashflow,
+      totalRentalIncome,
+      totalExpenses,
+      totalLoanRepayments,
       properties,
     });
   }
