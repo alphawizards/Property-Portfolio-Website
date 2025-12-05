@@ -786,3 +786,12 @@
 - [x] Tested expense growth rate functionality end-to-end
 - [x] Verified cashflow chart shows expenses growing over time (tested with 8% growth rate)
 - [x] Confirmed expense growth rate field saves to database and persists correctly
+
+## Dashboard Expense Growth Rate Enhancement (Completed)
+
+- [x] Analyze dashboard cashflow chart implementation
+- [x] Backend already applies expense growth rates correctly via calculateExpensesForYear function
+- [x] Update Dashboard component to visualize expenses and loan repayments as negative values
+- [x] Apply stacked area chart with proper gradient fills for clear visualization
+- [x] Test portfolio-wide cashflow projections with expense growth
+- [x] Verify expense growth is visible in the chart (orange area growing over time)

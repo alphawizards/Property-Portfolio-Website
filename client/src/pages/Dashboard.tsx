@@ -95,8 +95,8 @@ export default function Dashboard() {
         "Total Debt": p.totalDebt / 100,
         "Portfolio Equity": p.totalEquity / 100,
         "Rental Income": p.totalRentalIncome / 100,
-        "Expenses": p.totalExpenses / 100,
-        "Loan Repayments": p.totalLoanRepayments / 100,
+        "Expenses": -(p.totalExpenses / 100), // Negative for visualization
+        "Loan Repayments": -(p.totalLoanRepayments / 100), // Negative for visualization
         "Net Cashflow": p.totalCashflow / 100,
       })) || []
     : projections?.map((p) => {
@@ -300,15 +300,28 @@ export default function Dashboard() {
                     </AreaChart>
                   ) : viewMode === "cashflow" ? (
                     <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="colorMortgage" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ec4899" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#ec4899" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
-                      <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(value: number) => `$${(value / 1000).toFixed(2)}k`} />
+                      <YAxis tickFormatter={(value) => `$${(Math.abs(value) / 1000).toFixed(0)}k`} />
+                      <Tooltip formatter={(value: number) => `$${(Math.abs(value) / 1000).toFixed(2)}k`} />
                       <Legend />
-                      <Area type="monotone" dataKey="Rental Income" stroke="#10b981" fill="#10b981" fillOpacity={0.3} stackId="1" />
-                      <Area type="monotone" dataKey="Expenses" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} stackId="2" />
-                      <Area type="monotone" dataKey="Loan Repayments" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} stackId="2" />
-                      <Line type="monotone" dataKey="Net Cashflow" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 2 }} />
+                      <Area type="monotone" dataKey="Rental Income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" stackId="1" />
+                      <Area type="monotone" dataKey="Expenses" stroke="#f59e0b" fillOpacity={1} fill="url(#colorExpenses)" stackId="2" />
+                      <Area type="monotone" dataKey="Loan Repayments" stroke="#ec4899" fillOpacity={1} fill="url(#colorMortgage)" stackId="2" />
                     </AreaChart>
                   ) : (
                     <AreaChart data={chartData}>
