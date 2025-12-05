@@ -705,6 +705,7 @@ export default function PropertyDetailEnhanced() {
             weeklyExpenses={weeklyExpenses}
             monthlyMortgage={totalMonthlyMortgage}
             rentGrowthRate={rental?.[0]?.growthRate || 0}
+            expenseGrowthRate={expenses?.[0]?.growthRate || 0}
           />
 
           {/* Expense Logs */}
@@ -751,7 +752,7 @@ export default function PropertyDetailEnhanced() {
                           </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <ExpenseBreakdownLoader expenseLogId={expense.id} propertyId={propertyId} />
+                          <ExpenseBreakdownLoader expenseLogId={expense.id} propertyId={propertyId} initialGrowthRate={expense.growthRate} />
                         </CollapsibleContent>
                       </div>
                     </Collapsible>

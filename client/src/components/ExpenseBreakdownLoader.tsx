@@ -4,9 +4,10 @@ import { ExpenseLogEditor } from "./ExpenseLogEditor";
 interface ExpenseBreakdownLoaderProps {
   expenseLogId: number;
   propertyId: number;
+  initialGrowthRate?: number; // in basis points
 }
 
-export function ExpenseBreakdownLoader({ expenseLogId, propertyId }: ExpenseBreakdownLoaderProps) {
+export function ExpenseBreakdownLoader({ expenseLogId, propertyId, initialGrowthRate }: ExpenseBreakdownLoaderProps) {
   const { data: breakdown, isLoading } = trpc.expenses.getBreakdown.useQuery({ expenseLogId });
 
   if (isLoading) {
@@ -22,6 +23,7 @@ export function ExpenseBreakdownLoader({ expenseLogId, propertyId }: ExpenseBrea
       expenseLogId={expenseLogId}
       propertyId={propertyId}
       initialBreakdown={breakdown}
+      initialGrowthRate={initialGrowthRate}
     />
   );
 }

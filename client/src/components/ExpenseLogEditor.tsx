@@ -17,6 +17,7 @@ interface ExpenseLogEditorProps {
   expenseLogId: number;
   propertyId: number;
   initialBreakdown?: any[];
+  initialGrowthRate?: number; // in basis points (e.g., 300 = 3%)
   onSave?: () => void;
 }
 
@@ -32,10 +33,10 @@ const EXPENSE_CATEGORIES = [
   'Property Management Fees'
 ];
 
-export function ExpenseLogEditor({ expenseLogId, propertyId, initialBreakdown, onSave }: ExpenseLogEditorProps) {
+export function ExpenseLogEditor({ expenseLogId, propertyId, initialBreakdown, initialGrowthRate, onSave }: ExpenseLogEditorProps) {
   const utils = trpc.useUtils();
   const [expenses, setExpenses] = useState<Record<string, ExpenseCategory>>({});
-  const [growthRate, setGrowthRate] = useState(3);
+  const [growthRate, setGrowthRate] = useState((initialGrowthRate || 300) / 100); // Convert basis points to percentage
   const [isSaving, setIsSaving] = useState(false);
 
   // Initialize expenses from breakdown data
@@ -97,12 +98,12 @@ export function ExpenseLogEditor({ expenseLogId, propertyId, initialBreakdown, o
         amount: Math.round(exp.amount * 100), // Convert dollars to cents
         frequency: exp.frequency,
       }));
-
     updateExpenseMutation.mutate({
       id: expenseLogId,
-      breakdown
+      breakdown,
+      growthRate: Math.round(growthRate * 100) // Convert percentage to basis points (3% -> 300)
     });
-  };
+  };;
 
   return (
     <div className="p-4 border-t bg-gray-50">

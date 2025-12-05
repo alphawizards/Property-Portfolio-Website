@@ -599,6 +599,7 @@ export const appRouter = router({
         z.object({
           id: z.number().int(),
           breakdown: z.array(expenseBreakdownSchema),
+          growthRate: z.number().optional(), // in basis points (e.g., 300 = 3%)
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -613,8 +614,12 @@ export const appRouter = router({
         // Calculate total amount from breakdown
         const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
         
-        // Update expense log with new total amount
-        await db.updateExpenseLog(input.id, { totalAmount });
+        // Update expense log with new total amount and growth rate
+        const updates: { totalAmount: number; growthRate?: number } = { totalAmount };
+        if (input.growthRate !== undefined) {
+          updates.growthRate = input.growthRate;
+        }
+        await db.updateExpenseLog(input.id, updates);
         
         // Delete existing breakdown items
         await db.deleteExpenseBreakdownByLogId(input.id);

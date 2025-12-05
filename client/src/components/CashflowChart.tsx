@@ -8,11 +8,12 @@ interface CashflowChartProps {
   weeklyExpenses: number;
   monthlyMortgage: number;
   rentGrowthRate?: number; // in basis points (e.g., 300 = 3%)
+  expenseGrowthRate?: number; // in basis points (e.g., 300 = 3%)
 }
 
 type TimelineOption = 1 | 3 | 5 | 10;
 
-export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage, rentGrowthRate = 0 }: CashflowChartProps) {
+export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage, rentGrowthRate = 0, expenseGrowthRate = 0 }: CashflowChartProps) {
   const [selectedTimeline, setSelectedTimeline] = useState<TimelineOption>(1);
 
   // Generate data based on selected timeline
@@ -22,10 +23,11 @@ export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage, ren
     
     // Convert weekly cents to monthly cents (initial values)
     const initialMonthlyRent = Math.round(weeklyRent * 52 / 12);
-    const monthlyExpenses = Math.round(weeklyExpenses * 52 / 12);
+    const initialMonthlyExpenses = Math.round(weeklyExpenses * 52 / 12);
     
-    // Convert growth rate from basis points to decimal (e.g., 300 -> 0.03)
-    const annualGrowthRate = rentGrowthRate / 10000;
+    // Convert growth rates from basis points to decimal (e.g., 300 -> 0.03)
+    const annualRentGrowthRate = rentGrowthRate / 10000;
+    const annualExpenseGrowthRate = expenseGrowthRate / 10000;
 
     for (let i = 0; i < months; i++) {
       const monthIndex = i % 12;
@@ -33,10 +35,12 @@ export function CashflowChart({ weeklyRent, weeklyExpenses, monthlyMortgage, ren
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const label = years === 1 ? monthNames[monthIndex] : `${monthNames[monthIndex]} ${year + 1}`;
       
-      // Apply compound growth: initialRent × (1 + growthRate)^years
+      // Apply compound growth: initial × (1 + growthRate)^years
       const yearsElapsed = i / 12;
-      const growthMultiplier = Math.pow(1 + annualGrowthRate, yearsElapsed);
-      const monthlyRent = Math.round(initialMonthlyRent * growthMultiplier);
+      const rentGrowthMultiplier = Math.pow(1 + annualRentGrowthRate, yearsElapsed);
+      const expenseGrowthMultiplier = Math.pow(1 + annualExpenseGrowthRate, yearsElapsed);
+      const monthlyRent = Math.round(initialMonthlyRent * rentGrowthMultiplier);
+      const monthlyExpenses = Math.round(initialMonthlyExpenses * expenseGrowthMultiplier);
 
       data.push({
         month: label,

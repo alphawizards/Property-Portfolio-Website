@@ -761,3 +761,28 @@
 - [x] Verify Annual Rent updates correctly (weeklyRent × 52) ✅ Shows $26k for $500/week
 - [x] Verify Cashflow Summary updates with new rental income ✅ Shows $500 weekly, $26k annual
 - [x] Verify changes save to database on blur ✅ Data persists and chart updates
+
+
+## Verify Weekly Expenses Calculation & Add Expense Growth Rate (User Requested)
+
+- [ ] Verify weekly expenses ($296.80) equals annual expense log total ($14k) / 52 weeks
+- [ ] Check expense calculation logic in PropertyDetailEnhanced
+- [ ] Add expense growth rate field to database schema (similar to rent growth rate)
+- [ ] Add expense growth rate input field to UI (below Rent Growth Rate)
+- [ ] Update expense projections in calculations to apply growth rate over time
+- [ ] Update cashflow chart to show growing expenses
+- [ ] Test expense growth rate with different values (e.g., 3%, 5%)
+- [ ] Verify expenses grow correctly in 10-year projections
+
+## Expense Growth Rate Feature (Completed)
+
+- [x] Verified weekly expenses calculation ($15,434/year = $296.81/week)
+- [x] Updated backend expenses.update procedure to accept growthRate parameter
+- [x] Updated ExpenseLogEditor to send growthRate in mutation (converted to basis points)
+- [x] Updated ExpenseBreakdownLoader to pass initialGrowthRate prop
+- [x] Updated CashflowChart to accept expenseGrowthRate prop
+- [x] Applied compound growth formula to expenses in chart: initial × (1 + growthRate)^years
+- [x] Passed expense growth rate from PropertyDetailEnhanced to CashflowChart
+- [x] Tested expense growth rate functionality end-to-end
+- [x] Verified cashflow chart shows expenses growing over time (tested with 8% growth rate)
+- [x] Confirmed expense growth rate field saves to database and persists correctly
