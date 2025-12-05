@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { LoanCalculator } from "@/components/LoanCalculator";
 import { CashflowChart } from "@/components/CashflowChart";
@@ -122,6 +122,15 @@ export default function PropertyDetailEnhanced() {
     },
   });
 
+  // Initialize editedWeeklyRent with actual weeklyRent when data loads
+  // MUST be before any early returns to follow Rules of Hooks
+  const weeklyRent = rental?.[0]?.amount || 0;
+  useEffect(() => {
+    if (weeklyRent > 0 && editedWeeklyRent === 0) {
+      setEditedWeeklyRent(weeklyRent);
+    }
+  }, [weeklyRent, editedWeeklyRent]);
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -151,8 +160,7 @@ export default function PropertyDetailEnhanced() {
   const purchasePrice = property.purchasePrice;
   const roi = purchasePrice > 0 ? ((currentValue - purchasePrice) / purchasePrice) * 100 : 0;
   
-  // Calculate weekly rental income
-  const weeklyRent = rental?.[0]?.amount || 0;
+  // Calculate weekly rental income (weeklyRent already calculated above before early returns)
   const annualRent = weeklyRent * 52;
   
   // Calculate weekly expenses from breakdown with frequency
@@ -616,10 +624,13 @@ export default function PropertyDetailEnhanced() {
                   <Label>Weekly Rent</Label>
                   <Input 
                     type="number" 
-                    value={editedWeeklyRent > 0 ? (editedWeeklyRent / 100).toFixed(2) : (weeklyRent / 100).toFixed(2)} 
-                    onChange={(e) => setEditedWeeklyRent(Math.round(parseFloat(e.target.value || "0") * 100))}
+                    value={editedWeeklyRent / 100} 
+                    onChange={(e) => {
+                      const value = Math.round(parseFloat(e.target.value || "0") * 100);
+                      setEditedWeeklyRent(value);
+                    }}
                     onBlur={() => {
-                      if (editedWeeklyRent > 0) {
+                      if (editedWeeklyRent !== weeklyRent && editedWeeklyRent >= 0) {
                         if (rental && rental[0]) {
                           updateRentalMutation.mutate({ id: rental[0].id, weeklyRent: editedWeeklyRent });
                         } else {
@@ -635,7 +646,8 @@ export default function PropertyDetailEnhanced() {
                         }
                       }
                     }}
-                    placeholder="0.00" 
+                    placeholder="0.00"
+                    step="0.01"
                   />
                 </div>
                 <div>

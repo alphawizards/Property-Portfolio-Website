@@ -734,3 +734,30 @@
 - [x] Test Debt chart with All Properties (aggregated data) ✅
 - [x] Test Debt chart with single property (Brisbane Investment) ✅
 - [x] Verify charts update correctly when switching between properties ✅
+
+
+## Fix Weekly Rent Input Field (User Reported Issue)
+
+- [ ] Investigate current Weekly Rent input field implementation
+- [ ] Ensure input field accepts any numeric value
+- [ ] Fix any input restrictions or validation issues
+- [ ] Verify onChange handler properly updates state
+- [ ] Verify onBlur handler saves changes to database
+- [ ] Test typing different values (e.g., 500, 750, 1000)
+- [ ] Verify Annual Rent calculation updates correctly
+- [ ] Verify Cashflow Summary updates when Weekly Rent changes
+
+
+## Fix Weekly Rent Input Field (User Reported Issue)
+
+- [x] Investigate current Weekly Rent input field implementation
+- [x] Fix input field to allow typing any number
+- [x] Remove conditional value logic that prevents editing
+- [x] Initialize editedWeeklyRent state with actual weeklyRent value
+- [x] Add useEffect to sync state when rental data loads
+- [x] Fix React hooks violation (useEffect must be before early returns)
+- [x] Remove .toFixed(2) from value prop to allow proper number input
+- [x] Test typing numbers into Weekly Rent field ✅
+- [x] Verify Annual Rent updates correctly (weeklyRent × 52) ✅ Shows $26k for $500/week
+- [x] Verify Cashflow Summary updates with new rental income ✅ Shows $500 weekly, $26k annual
+- [x] Verify changes save to database on blur ✅ Data persists and chart updates
