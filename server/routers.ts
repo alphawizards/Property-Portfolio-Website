@@ -703,12 +703,18 @@ export const appRouter = router({
         z.object({
           startYear: z.number().int(),
           endYear: z.number().int(),
+          expenseGrowthOverride: z.number().nullable().optional(), // Override expense growth rate (as percentage, e.g., 3 for 3%)
         })
       )
       .query(async ({ input, ctx }) => {
         const portfolioData = await db.getUserPortfolioData(ctx.user.id);
         if (!portfolioData) return [];
-        return calc.generatePortfolioProjections(portfolioData.properties, input.startYear, input.endYear);
+        return calc.generatePortfolioProjections(
+          portfolioData.properties,
+          input.startYear,
+          input.endYear,
+          input.expenseGrowthOverride ?? undefined
+        );
       }),
 
     propertyEquity: protectedProcedure

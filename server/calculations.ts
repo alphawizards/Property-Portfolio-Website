@@ -245,8 +245,13 @@ export function calculateRentalIncomeForYear(rentalIncomes: RentalIncome[], targ
 
 /**
  * Calculate annual expenses for a given year
+ * @param expenseGrowthOverride Optional override for expense growth rate (as percentage, e.g., 3 for 3%)
  */
-export function calculateExpensesForYear(expenses: ExpenseLog[], targetYear: number): number {
+export function calculateExpensesForYear(
+  expenses: ExpenseLog[],
+  targetYear: number,
+  expenseGrowthOverride?: number
+): number {
   let totalAnnualExpenses = 0;
 
   for (const expense of expenses) {
@@ -257,7 +262,10 @@ export function calculateExpensesForYear(expenses: ExpenseLog[], targetYear: num
       continue; // Expense hasn't started yet
     }
 
-    const growthRate = basisPointsToRate(expense.growthRate);
+    // Use override if provided, otherwise use expense-specific growth rate
+    const growthRate = expenseGrowthOverride !== undefined
+      ? expenseGrowthOverride / 100 // Convert percentage to rate
+      : basisPointsToRate(expense.growthRate);
     const currentAmount = Math.round(expense.totalAmount * Math.pow(1 + growthRate, yearsElapsed));
 
     // Convert to annual based on frequency
@@ -346,10 +354,11 @@ export function calculatePropertyCashflow(
   rentalIncomes: RentalIncome[],
   expenses: ExpenseLog[],
   depreciation: DepreciationSchedule[],
-  targetYear: number
+  targetYear: number,
+  expenseGrowthOverride?: number
 ): PropertyCashflow {
   const rentalIncome = calculateRentalIncomeForYear(rentalIncomes, targetYear);
-  const expensesAmount = calculateExpensesForYear(expenses, targetYear);
+  const expensesAmount = calculateExpensesForYear(expenses, targetYear, expenseGrowthOverride);
 
   let loanRepayments = 0;
   for (const loan of loans) {
@@ -458,8 +467,14 @@ export function calculatePortfolioSummary(propertiesData: any[], targetYear: num
 
 /**
  * Generate portfolio projections over multiple years
+ * @param expenseGrowthOverride Optional override for all expense growth rates (as percentage, e.g., 3 for 3%)
  */
-export function generatePortfolioProjections(propertiesData: any[], startYear: number, endYear: number): PortfolioProjection[] {
+export function generatePortfolioProjections(
+  propertiesData: any[],
+  startYear: number,
+  endYear: number,
+  expenseGrowthOverride?: number
+): PortfolioProjection[] {
   const projections: PortfolioProjection[] = [];
 
   for (let year = startYear; year <= endYear; year++) {
@@ -474,7 +489,15 @@ export function generatePortfolioProjections(propertiesData: any[], startYear: n
 
     for (const data of propertiesData) {
       const equity = calculatePropertyEquity(data.property, data.loans, data.valuations, data.growthRates, year);
-      const cashflow = calculatePropertyCashflow(data.property, data.loans, data.rental, data.expenses, data.depreciation, year);
+      const cashflow = calculatePropertyCashflow(
+        data.property,
+        data.loans,
+        data.rental,
+        data.expenses,
+        data.depreciation,
+        year,
+        expenseGrowthOverride
+      );
 
       totalValue += equity.propertyValue;
       totalDebt += equity.totalDebt;

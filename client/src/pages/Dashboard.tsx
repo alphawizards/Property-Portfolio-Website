@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
+  const [expenseGrowthOverride, setExpenseGrowthOverride] = useState<number | null>(null); // null = use property-specific rates
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const utils = trpc.useUtils();
@@ -57,6 +58,7 @@ export default function Dashboard() {
   const { data: projections } = trpc.calculations.portfolioProjections.useQuery({
     startYear: currentYear,
     endYear: currentYear + selectedYears,
+    expenseGrowthOverride: expenseGrowthOverride,
   });
 
   // Filter properties and projections based on selection
@@ -255,6 +257,45 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Expense Growth Override Control - Only show in cashflow view */}
+            {viewMode === "cashflow" && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <label className="text-sm font-medium text-amber-900 whitespace-nowrap">
+                      Portfolio Expense Growth Rate:
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="20"
+                      step="0.5"
+                      value={expenseGrowthOverride ?? ""}
+                      onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
+                      placeholder="Use property rates"
+                      className="w-24 px-3 py-1.5 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-amber-700">% per year</span>
+                  </div>
+                  {expenseGrowthOverride !== null && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExpenseGrowthOverride(null)}
+                      className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                    >
+                      Reset to Property Rates
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-amber-600 mt-2">
+                  {expenseGrowthOverride === null
+                    ? "Using individual property expense growth rates"
+                    : `Overriding all properties with ${expenseGrowthOverride}% annual expense growth`}
+                </p>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {chartData.length > 0 ? (

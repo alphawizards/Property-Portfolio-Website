@@ -795,3 +795,15 @@
 - [x] Apply stacked area chart with proper gradient fills for clear visualization
 - [x] Test portfolio-wide cashflow projections with expense growth
 - [x] Verify expense growth is visible in the chart (orange area growing over time)
+
+## Portfolio-Wide Expense Growth Rate Control (Completed)
+
+- [x] Add expense growth rate input control to dashboard UI in amber banner (only visible in Cashflow view)
+- [x] Position control below chart view mode tabs with clear labeling and placeholder text
+- [x] Update backend portfolioProjections to accept optional expenseGrowthOverride parameter
+- [x] Modify calculateExpensesForYear to use override rate when provided (percentage to rate conversion)
+- [x] Connect UI control to trigger automatic chart recalculation via reactive tRPC query
+- [x] Add dynamic status message showing when override is active vs using property-specific rates
+- [x] Add "Reset to Property Rates" button that appears when override is active
+- [x] Test with various growth rates (0%, 10%, 15%) to verify calculations and visual impact
+- [x] Verified chart updates correctly showing flat expenses at 0% and steep growth at 15%
