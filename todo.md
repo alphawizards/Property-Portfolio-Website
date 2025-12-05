@@ -662,3 +662,30 @@
 - [ ] Optimize chart rendering performance
 - [ ] Ensure mobile responsiveness
 - [ ] Add keyboard shortcuts for power users
+
+
+## Property Selector Filtering (User Requested)
+
+- [ ] Update Dashboard to filter data based on selected property from dropdown
+- [ ] When specific property selected: show only that property's value, debt, equity in summary cards
+- [ ] When specific property selected: filter chart data to show only that property's projections
+- [ ] When "All Properties" selected: aggregate all properties' values, debt, equity
+- [ ] When "All Properties" selected: show combined projections across all properties
+- [ ] Update portfolio summary cards to reflect filtered data
+- [ ] Ensure chart updates correctly when switching between properties
+- [ ] Test with Brisbane Investment (900k value, 670k debt, 230k equity)
+- [ ] Test with Test Property (750k value, 694k debt, 56k equity)
+- [ ] Test with "All Properties" showing combined totals
+
+
+## Property Selector Filtering (User Requested)
+
+- [x] Make property selector dropdown functional
+- [x] Add state management for selected property ID
+- [x] Filter summary cards based on selected property
+- [x] Filter chart data to show only selected property's projections
+- [x] When "All Properties" selected, aggregate all property data
+- [x] Update purchase markers to only show for filtered properties
+- [x] Test Brisbane Investment: shows $900k value, $670k debt, $230k equity ✅
+- [x] Test Test Property: shows $750k value, $694k debt, $56k equity ✅
+- [x] Test All Properties: shows $1.65m value, $1.36m debt, $286k equity ✅

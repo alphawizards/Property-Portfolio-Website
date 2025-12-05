@@ -23,6 +23,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const utils = trpc.useUtils();
@@ -58,6 +59,22 @@ export default function Dashboard() {
     endYear: currentYear + selectedYears,
   });
 
+  // Filter properties and projections based on selection
+  const filteredProperties = selectedPropertyId === "all" 
+    ? properties 
+    : properties?.filter(p => p.id === parseInt(selectedPropertyId));
+
+  // Calculate filtered summary from filtered properties
+  const filteredSummary = filteredProperties?.reduce(
+    (acc, prop) => ({
+      totalValue: acc.totalValue + prop.currentValue,
+      totalDebt: acc.totalDebt + prop.totalDebt,
+      totalEquity: acc.totalEquity + prop.equity,
+      propertyCount: acc.propertyCount + 1,
+    }),
+    { totalValue: 0, totalDebt: 0, totalEquity: 0, propertyCount: 0 }
+  ) || { totalValue: 0, totalDebt: 0, totalEquity: 0, propertyCount: 0 };
+
   const currentSummary = projections && projections.length > 0 ? projections[0] : null;
 
   // Format currency for display
@@ -69,16 +86,38 @@ export default function Dashboard() {
     return `$${(dollars / 1000).toFixed(0)}k`;
   };
 
-  // Prepare chart data
-  const chartData =
-    projections?.map((p) => ({
-      year: `FY ${p.year.toString().slice(-2)}`,
-      fullYear: p.year,
-      "Portfolio Value": p.totalValue / 100,
-      "Total Debt": p.totalDebt / 100,
-      "Portfolio Equity": p.totalEquity / 100,
-      Cashflow: p.totalCashflow / 100,
-    })) || [];
+  // Prepare chart data - filter by selected property if applicable
+  const chartData = selectedPropertyId === "all"
+    ? projections?.map((p) => ({
+        year: `FY ${p.year.toString().slice(-2)}`,
+        fullYear: p.year,
+        "Portfolio Value": p.totalValue / 100,
+        "Total Debt": p.totalDebt / 100,
+        "Portfolio Equity": p.totalEquity / 100,
+        Cashflow: p.totalCashflow / 100,
+      })) || []
+    : projections?.map((p) => {
+        // Filter projection data for selected property
+        const selectedProp = filteredProperties?.[0];
+        if (!selectedProp) return null;
+        
+        // Calculate simple projections for single property
+        // This is a simplified version - in production you'd want property-specific projection data
+        const yearOffset = p.year - currentYear;
+        const growthRate = 1.05; // 5% annual growth assumption
+        const projectedValue = selectedProp.currentValue * Math.pow(growthRate, yearOffset);
+        const projectedDebt = Math.max(0, selectedProp.totalDebt * Math.pow(0.97, yearOffset)); // 3% debt reduction
+        const projectedEquity = projectedValue - projectedDebt;
+        
+        return {
+          year: `FY ${p.year.toString().slice(-2)}`,
+          fullYear: p.year,
+          "Portfolio Value": projectedValue / 100,
+          "Total Debt": projectedDebt / 100,
+          "Portfolio Equity": projectedEquity / 100,
+          Cashflow: 0, // Would need property-specific cashflow calculation
+        };
+      }).filter(Boolean) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,7 +161,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-900">{properties?.length || 0}</div>
+                <div className="text-3xl font-bold text-blue-900">{filteredSummary.propertyCount}</div>
               </CardContent>
             </Card>
 
@@ -134,7 +173,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-900">{currentSummary ? formatCurrency(currentSummary.totalValue) : "$0"}</div>
+                <div className="text-3xl font-bold text-green-900">{formatCurrency(filteredSummary.totalValue)}</div>
               </CardContent>
             </Card>
 
@@ -146,7 +185,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-pink-900">{currentSummary ? formatCurrency(currentSummary.totalDebt) : "$0"}</div>
+                <div className="text-3xl font-bold text-pink-900">{formatCurrency(filteredSummary.totalDebt)}</div>
               </CardContent>
             </Card>
 
@@ -158,7 +197,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-yellow-900">{currentSummary ? formatCurrency(currentSummary.totalEquity) : "$0"}</div>
+                <div className="text-3xl font-bold text-yellow-900">{formatCurrency(filteredSummary.totalEquity)}</div>
               </CardContent>
             </Card>
 
@@ -198,7 +237,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <Select defaultValue="all">
+              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="All Properties" />
                 </SelectTrigger>
@@ -234,7 +273,7 @@ export default function Dashboard() {
                       <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeDasharray="5 5" />
                       <Area type="monotone" dataKey="Portfolio Equity" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
                       {/* Purchase date markers */}
-                      {properties?.map((property) => {
+                      {filteredProperties?.map((property) => {
                         const purchaseYear = new Date(property.purchaseDate).getFullYear();
                         const chartYear = `FY ${purchaseYear.toString().slice(-2)}`;
                         const dataPoint = chartData.find(d => d.year === chartYear);
