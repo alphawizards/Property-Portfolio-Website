@@ -7,6 +7,7 @@ import * as db from "./db";
 import * as calc from "./calculations";
 import { TRPCError } from "@trpc/server";
 import { subscriptionRouter } from "./subscription-router";
+import { authRouter } from "./routers/auth";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -119,16 +120,7 @@ const portfolioGoalSchema = z.object({
 export const appRouter = router({
   system: systemRouter,
   subscription: subscriptionRouter,
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
 
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({

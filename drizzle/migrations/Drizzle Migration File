@@ -1,0 +1,2 @@
+# Create the migration file (exact timestamp needed)
+touch drizzle/0003_subscription_system.sql

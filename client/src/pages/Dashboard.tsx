@@ -321,7 +321,7 @@ export default function Dashboard() {
                       {filteredProperties?.map((property) => {
                         const purchaseYear = new Date(property.purchaseDate).getFullYear();
                         const chartYear = `FY ${purchaseYear.toString().slice(-2)}`;
-                        const dataPoint = chartData.find(d => d.year === chartYear);
+                        const dataPoint = chartData.find((d: any) => d.year === chartYear);
                         if (dataPoint) {
                           return (
                             <ReferenceDot

@@ -687,7 +687,7 @@ export default function PropertyDetailEnhanced() {
                     onChange={(e) => setEditedExpenseGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
                     onBlur={() => {
                       if (editedExpenseGrowth > 0 && expenses && expenses[0]) {
-                        updateExpenseMutation.mutate({ id: expenses[0].id, growthRate: editedExpenseGrowth });
+                        updateExpenseMutation.mutate({ id: expenses[0].id, growthRate: editedExpenseGrowth, breakdown: [] });
                       }
                     }}
                     step="0.1" 
