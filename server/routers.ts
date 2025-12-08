@@ -7,6 +7,8 @@ import * as db from "./db";
 import * as calc from "../shared/calculations";
 import { TRPCError } from "@trpc/server";
 import { subscriptionRouter } from "./subscription-router";
+import { featureGatesRouter } from "./routers/feature-gates-router";
+import { adminRouter } from "./routers/admin-router";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -119,6 +121,8 @@ const portfolioGoalSchema = z.object({
 export const appRouter = router({
   system: systemRouter,
   subscription: subscriptionRouter,
+  featureGates: featureGatesRouter,
+  admin: adminRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

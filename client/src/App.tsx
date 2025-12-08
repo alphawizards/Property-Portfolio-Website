@@ -8,6 +8,7 @@ import PropertyDetailEnhanced from "@/pages/PropertyDetailEnhanced";
 import Comparison from "@/pages/Comparison";
 import Subscription from "@/pages/Subscription";
 import PropertyAnalysis from "@/pages/PropertyAnalysis";
+import AdminDashboard from "@/pages/AdminDashboard";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/properties/:id/analysis" component={PropertyAnalysis} />
       <Route path="/comparison" component={Comparison} />
       <Route path="/subscription" component={Subscription} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

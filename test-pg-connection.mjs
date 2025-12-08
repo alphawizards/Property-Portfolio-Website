@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 
 config();
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/database';
 
 console.log('🔌 Testing PlanetScale PostgreSQL connection...\n');
 console.log('Connection string:', connectionString.replace(/:[^:@]+@/, ':****@'));
