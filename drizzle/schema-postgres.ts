@@ -13,7 +13,7 @@ import {
   index,
   integer,
 } from 'drizzle-orm/pg-core';
-import { relations, sql } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 
 /**
  * User role enum
