@@ -133,15 +133,15 @@ function DashboardLayoutContent({
   // Since scenarios are linked to a property in the DB schema (loanScenarios), but the requirement implies portfolio-level scenarios.
   // Let's check the schema again. Ah, we added a `scenarios` table linked to `originalPortfolioId`.
   // We need a way to list scenarios for the user. The router `scenarios` (which we renamed to `loanScenarios` in one place, but added `scenarios` router for cloning)
-  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const { data: scenarios } = trpc.portfolioScenarios.list.useQuery();
   const utils = trpc.useUtils();
 
-  const createScenarioMutation = trpc.scenarios.clone.useMutation({
+  const createScenarioMutation = trpc.portfolioScenarios.clone.useMutation({
     onSuccess: (data) => {
       toast.success("Scenario created successfully");
       setIsCreateScenarioOpen(false);
       setNewScenarioName("");
-      utils.scenarios.list.invalidate();
+      utils.portfolioScenarios.list.invalidate();
       setCurrentScenarioId(data.id);
     },
     onError: (error) => {
