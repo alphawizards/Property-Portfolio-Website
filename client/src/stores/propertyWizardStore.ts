@@ -9,6 +9,7 @@
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import type { LoanStructure, Region } from '../lib/engine/types';
 
 export type WizardStep = 
@@ -107,7 +108,7 @@ const initialFormData: Partial<PropertyWizardData> = {
   growthRate: 6.0,
 };
 
-export const usePropertyWizardStore = create<PropertyWizardState>((set, get) => ({
+export const usePropertyWizardStore = create<PropertyWizardState>()(devtools((set, get) => ({
   // Initial state
   currentStep: 'welcome',
   formData: initialFormData,
@@ -243,4 +244,4 @@ export const usePropertyWizardStore = create<PropertyWizardState>((set, get) => 
     currentStep: 'welcome',
     errors: {},
   }),
-}));
+}), { name: 'PropertyWizardStore' }));

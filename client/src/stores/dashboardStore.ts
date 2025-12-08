@@ -9,6 +9,7 @@
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import type { AmortizationSchedule, GrowthForecast, CashflowProjection } from '../lib/engine/types';
 
 export type ChartView = 'growth' | 'cashflow' | 'equity' | 'tax';
@@ -58,7 +59,7 @@ interface DashboardState {
   clearComparison: () => void;
 }
 
-export const useDashboardStore = create<DashboardState>((set, get) => ({
+export const useDashboardStore = create<DashboardState>()(devtools((set, get) => ({
   // Initial state
   selectedPropertyId: null,
   activeChartView: 'growth',
@@ -118,4 +119,4 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   })),
 
   clearComparison: () => set({ comparisonPropertyIds: [], comparisonMode: false }),
-}));
+}), { name: 'DashboardStore' }));
