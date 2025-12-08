@@ -150,6 +150,7 @@ function DashboardLayoutContent({
   // Given "Clone Portfolio -> Scenario", it must be the new `scenarios` table.
   // I will add `list` to `portfolioScenarios` router in `server/routers.ts` quickly.
 
+  // We need a way to list scenarios for the user. The router `scenarios` (which we renamed to `loanScenarios` in one place, but added `scenarios` router for cloning)
   const { data: scenarios } = trpc.portfolioScenarios.list.useQuery();
   const utils = trpc.useUtils();
 
@@ -166,13 +167,6 @@ function DashboardLayoutContent({
     }
   });
 
-  const handleCreateScenario = () => {
-    if (!newScenarioName.trim()) return;
-    // We need a portfolioId to clone. For now, let's assume we clone the user's main portfolio.
-    // We need to fetch the user's portfolios first.
-    // This is getting complicated. Let's fetch portfolios.
-    // For MVP, let's assume the user has one main portfolio or we pick the first one.
-  };
   
   // We need the user's portfolios to know what to clone.
   const { data: portfolios } = trpc.portfolios.list.useQuery();

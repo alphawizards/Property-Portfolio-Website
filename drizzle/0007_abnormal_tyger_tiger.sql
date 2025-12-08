@@ -42,16 +42,16 @@ ALTER TABLE `loan_scenarios` MODIFY COLUMN `createdAt` timestamp NOT NULL DEFAUL
 ALTER TABLE `loan_scenarios` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
 ALTER TABLE `loans` MODIFY COLUMN `createdAt` timestamp NOT NULL;--> statement-breakpoint
 ALTER TABLE `loans` MODIFY COLUMN `updatedAt` timestamp NOT NULL;--> statement-breakpoint
-ALTER TABLE `loans` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT () => import_drizzle_orm.sql`CURRENT_TIMESTAMP`;--> statement-breakpoint
+ALTER TABLE `loans` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;--> statement-breakpoint
 ALTER TABLE `portfolios` MODIFY COLUMN `createdAt` timestamp NOT NULL;--> statement-breakpoint
 ALTER TABLE `portfolios` MODIFY COLUMN `updatedAt` timestamp NOT NULL;--> statement-breakpoint
-ALTER TABLE `portfolios` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT () => import_drizzle_orm.sql`CURRENT_TIMESTAMP`;--> statement-breakpoint
+ALTER TABLE `portfolios` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;--> statement-breakpoint
 ALTER TABLE `properties` MODIFY COLUMN `createdAt` timestamp NOT NULL;--> statement-breakpoint
 ALTER TABLE `properties` MODIFY COLUMN `updatedAt` timestamp NOT NULL;--> statement-breakpoint
-ALTER TABLE `properties` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT () => import_drizzle_orm.sql`CURRENT_TIMESTAMP`;--> statement-breakpoint
+ALTER TABLE `properties` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;--> statement-breakpoint
 ALTER TABLE `users` MODIFY COLUMN `createdAt` timestamp NOT NULL;--> statement-breakpoint
 ALTER TABLE `users` MODIFY COLUMN `updatedAt` timestamp NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT () => import_drizzle_orm.sql`CURRENT_TIMESTAMP`;--> statement-breakpoint
+ALTER TABLE `users` MODIFY COLUMN `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;--> statement-breakpoint
 ALTER TABLE `users` MODIFY COLUMN `lastSignedIn` timestamp NOT NULL;--> statement-breakpoint
 ALTER TABLE `users` ADD `is_active` boolean DEFAULT true NOT NULL;--> statement-breakpoint
 CREATE INDEX `idx_user_subscriptions_tier_id` ON `user_subscriptions` (`tierId`);--> statement-breakpoint

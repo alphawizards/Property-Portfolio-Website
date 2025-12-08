@@ -779,48 +779,54 @@ export async function clonePortfolioToScenario(portfolioId: number, userId: numb
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // 1. Create Scenario
-  const scenarioId = await createScenario({
-    userId,
-    originalPortfolioId: portfolioId,
-    name: scenarioName,
+  // Use Drizzle's transaction API
+  return await db.transaction(async (tx) => {
+    // 1. Create Scenario
+    const scenarioInsertResult = await tx.insert(scenarios).values({
+      userId,
+      originalPortfolioId: portfolioId,
+      name: scenarioName,
+    });
+    const scenarioId = parseInt(scenarioInsertResult.insertId);
+
+    // 2. Get Properties
+    const propertiesList = await tx.select().from(properties).where(eq(properties.portfolioId, portfolioId));
+
+    // 3. Clone Properties
+    for (const prop of propertiesList) {
+      // Clone Property
+      const { id: oldId, ...propData } = prop;
+      const newPropData: InsertProperty = {
+        ...propData,
+        portfolioId: null, // Detach from portfolio
+        scenarioId: scenarioId, // Attach to scenario
+      };
+      const newPropInsertResult = await tx.insert(properties).values(newPropData);
+      const newPropId = parseInt(newPropInsertResult.insertId);
+
+      // Clone Loans
+      const loansList = await tx.select().from(loans).where(eq(loans.propertyId, oldId));
+      for (const loan of loansList) {
+        const { id, ...loanData } = loan;
+        await tx.insert(loans).values({ ...loanData, propertyId: newPropId });
+      }
+
+      // Clone Valuations
+      const valuationsList = await tx.select().from(propertyValuations).where(eq(propertyValuations.propertyId, oldId));
+      for (const val of valuationsList) {
+        const { id, ...valData } = val;
+        await tx.insert(propertyValuations).values({ ...valData, propertyId: newPropId });
+      }
+      
+      // Clone Ownership
+      const ownershipList = await tx.select().from(propertyOwnership).where(eq(propertyOwnership.propertyId, oldId));
+      if (ownershipList.length > 0) {
+          const newOwnership = ownershipList.map(({ id, propertyId, ...rest }) => ({ ...rest, propertyId: newPropId }));
+          // Insert all ownerships in batch
+          await tx.insert(propertyOwnership).values(newOwnership);
+      }
+    }
+
+    return scenarioId;
   });
-
-  // 2. Get Properties
-  const propertiesList = await getPropertiesByPortfolioId(portfolioId);
-
-  // 3. Clone Properties
-  for (const prop of propertiesList) {
-    // Clone Property
-    const { id: oldId, ...propData } = prop;
-    const newPropData: InsertProperty = {
-      ...propData,
-      portfolioId: null, // Detach from portfolio
-      scenarioId: scenarioId, // Attach to scenario
-    };
-    const newPropId = await createProperty(newPropData);
-
-    // Clone Loans
-    const loansList = await getPropertyLoans(oldId);
-    for (const loan of loansList) {
-      const { id, ...loanData } = loan;
-      await createLoan({ ...loanData, propertyId: newPropId });
-    }
-
-    // Clone Valuations
-    const valuationsList = await getPropertyValuations(oldId);
-    for (const val of valuationsList) {
-      const { id, ...valData } = val;
-      await addPropertyValuation({ ...valData, propertyId: newPropId });
-    }
-    
-    // Clone Ownership
-    const ownershipList = await getPropertyOwnership(oldId);
-    if (ownershipList.length > 0) {
-        const newOwnership = ownershipList.map(({ id, propertyId, ...rest }) => ({ ...rest, propertyId: newPropId }));
-        await setPropertyOwnership(newPropId, newOwnership);
-    }
-  }
-
-  return scenarioId;
 }
