@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Link } from "wouter";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceDot } from "recharts";
+import { useScenario } from "@/contexts/ScenarioContext";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { currentScenarioId } = useScenario();
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
@@ -33,6 +35,7 @@ export default function Dashboard() {
     onSuccess: () => {
       utils.properties.listWithFinancials.invalidate();
       utils.calculations.portfolioProjections.invalidate();
+      utils.portfolios.getDashboard.invalidate();
       setDeleteDialogOpen(false);
       setPropertyToDelete(null);
     },
@@ -53,12 +56,19 @@ export default function Dashboard() {
 
   const currentYear = new Date().getFullYear();
 
-  const { data: properties } = trpc.properties.listWithFinancials.useQuery();
-  const { data: goal } = trpc.portfolio.getGoal.useQuery();
+  // Use the new optimized dashboard query
+  const { data: dashboardData, isLoading: isDashboardLoading } = trpc.portfolios.getDashboard.useQuery({
+    scenarioId: currentScenarioId ?? undefined,
+  });
+
+  const properties = dashboardData?.properties;
+  const goal = dashboardData?.goal;
+  
   const { data: projections } = trpc.calculations.portfolioProjections.useQuery({
     startYear: currentYear,
     endYear: currentYear + selectedYears,
     expenseGrowthOverride: expenseGrowthOverride,
+    scenarioId: currentScenarioId ?? undefined,
   });
 
   // Filter properties and projections based on selection

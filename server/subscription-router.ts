@@ -35,6 +35,9 @@ export const subscriptionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const product = SUBSCRIPTION_PRODUCTS[input.tier];
+      const origin = 'get' in ctx.req.headers && typeof ctx.req.headers.get === 'function'
+        ? ctx.req.headers.get('origin')
+        : (ctx.req as any).headers.origin;
 
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
@@ -45,8 +48,8 @@ export const subscriptionRouter = router({
             quantity: 1,
           },
         ],
-        success_url: `${ctx.req.headers.origin}/?success=true`,
-        cancel_url: `${ctx.req.headers.origin}/?canceled=true`,
+        success_url: `${origin}/?success=true`,
+        cancel_url: `${origin}/?canceled=true`,
         customer_email: ctx.user.email || undefined,
         client_reference_id: ctx.user.id.toString(),
         metadata: {

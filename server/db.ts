@@ -1,5 +1,8 @@
-import { eq, and, desc, asc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { eq, and, desc, asc, isNull } from "drizzle-orm";
+import { Client } from "@planetscale/database";
+import { drizzle } from "drizzle-orm/planetscale-serverless";
+import * as schema from "../drizzle/schema";
+import * as relations from "../drizzle/relations";
 import {
   InsertUser,
   users,
@@ -34,15 +37,18 @@ import {
   InsertPortfolioGoal,
   loanScenarios,
   InsertLoanScenario,
+  scenarios,
+  InsertScenario,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: ReturnType<typeof drizzle<typeof schema & typeof relations>> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const client = new Client({ url: process.env.DATABASE_URL });
+      _db = drizzle(client, { schema: { ...schema, ...relations } });
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -131,7 +137,7 @@ export async function createPortfolio(portfolio: InsertPortfolio) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(portfolios).values(portfolio);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getPortfoliosByUserId(userId: number) {
@@ -177,14 +183,22 @@ export async function createProperty(property: InsertProperty) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(properties).values(property);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
-export async function getPropertiesByUserId(userId: number) {
+export async function getPropertiesByUserId(userId: number, scenarioId?: number | null) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db.select().from(properties).where(eq(properties.userId, userId)).orderBy(desc(properties.createdAt));
+  const conditions = [eq(properties.userId, userId)];
+
+  if (scenarioId === null) {
+    conditions.push(isNull(properties.scenarioId));
+  } else if (scenarioId !== undefined) {
+    conditions.push(eq(properties.scenarioId, scenarioId));
+  }
+
+  return await db.select().from(properties).where(and(...conditions)).orderBy(desc(properties.createdAt));
 }
 
 export async function getPropertyById(propertyId: number) {
@@ -279,7 +293,7 @@ export async function addPropertyUsagePeriod(period: InsertPropertyUsagePeriod) 
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(propertyUsagePeriods).values(period);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getPropertyUsagePeriods(propertyId: number) {
@@ -303,7 +317,7 @@ export async function createLoan(loan: InsertLoan) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(loans).values(loan);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getPropertyLoans(propertyId: number) {
@@ -342,7 +356,7 @@ export async function addPropertyValuation(valuation: InsertPropertyValuation) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(propertyValuations).values(valuation);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getPropertyValuations(propertyId: number) {
@@ -366,7 +380,7 @@ export async function addGrowthRatePeriod(period: InsertGrowthRatePeriod) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(growthRatePeriods).values(period);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getGrowthRatePeriods(propertyId: number) {
@@ -390,7 +404,7 @@ export async function addRentalIncome(income: InsertRentalIncome) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(rentalIncome).values(income);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getRentalIncome(propertyId: number) {
@@ -421,7 +435,7 @@ export async function createExpenseLog(expense: InsertExpenseLog) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(expenseLogs).values(expense);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getExpenseLogs(propertyId: number) {
@@ -446,7 +460,7 @@ export async function addExpenseBreakdown(breakdown: InsertExpenseBreakdown) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(expenseBreakdown).values(breakdown);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getExpenseBreakdown(expenseLogId: number) {
@@ -517,7 +531,7 @@ export async function addDepreciationSchedule(schedule: InsertDepreciationSchedu
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(depreciationSchedule).values(schedule);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getDepreciationSchedule(propertyId: number) {
@@ -541,7 +555,7 @@ export async function addCapitalExpenditure(capex: InsertCapitalExpenditure) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(capitalExpenditure).values(capex);
-  return result[0].insertId;
+  return parseInt(result.insertId);
 }
 
 export async function getCapitalExpenditure(propertyId: number) {
@@ -621,11 +635,11 @@ export async function getCompletePropertyData(propertyId: number) {
   };
 }
 
-export async function getUserPortfolioData(userId: number) {
+export async function getUserPortfolioData(userId: number, scenarioId?: number | null) {
   const db = await getDb();
   if (!db) return null;
 
-  const userProperties = await getPropertiesByUserId(userId);
+  const userProperties = await getPropertiesByUserId(userId, scenarioId);
   const goal = await getPortfolioGoal(userId);
 
   const propertiesData = await Promise.all(userProperties.map((prop) => getCompletePropertyData(prop.id)));
@@ -742,4 +756,71 @@ export async function deleteLoanScenario(id: number) {
   if (!db) throw new Error("Database not available");
 
   await db.delete(loanScenarios).where(eq(loanScenarios.id, id));
+}
+
+// ============ SCENARIO OPERATIONS ============
+
+export async function getScenariosByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(scenarios).where(eq(scenarios.userId, userId)).orderBy(desc(scenarios.createdAt));
+}
+
+export async function createScenario(scenario: InsertScenario) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(scenarios).values(scenario);
+  return parseInt(result.insertId);
+}
+
+export async function clonePortfolioToScenario(portfolioId: number, userId: number, scenarioName: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // 1. Create Scenario
+  const scenarioId = await createScenario({
+    userId,
+    originalPortfolioId: portfolioId,
+    name: scenarioName,
+  });
+
+  // 2. Get Properties
+  const propertiesList = await getPropertiesByPortfolioId(portfolioId);
+
+  // 3. Clone Properties
+  for (const prop of propertiesList) {
+    // Clone Property
+    const { id: oldId, ...propData } = prop;
+    const newPropData: InsertProperty = {
+      ...propData,
+      portfolioId: null, // Detach from portfolio
+      scenarioId: scenarioId, // Attach to scenario
+    };
+    const newPropId = await createProperty(newPropData);
+
+    // Clone Loans
+    const loansList = await getPropertyLoans(oldId);
+    for (const loan of loansList) {
+      const { id, ...loanData } = loan;
+      await createLoan({ ...loanData, propertyId: newPropId });
+    }
+
+    // Clone Valuations
+    const valuationsList = await getPropertyValuations(oldId);
+    for (const val of valuationsList) {
+      const { id, ...valData } = val;
+      await addPropertyValuation({ ...valData, propertyId: newPropId });
+    }
+    
+    // Clone Ownership
+    const ownershipList = await getPropertyOwnership(oldId);
+    if (ownershipList.length > 0) {
+        const newOwnership = ownershipList.map(({ id, propertyId, ...rest }) => ({ ...rest, propertyId: newPropId }));
+        await setPropertyOwnership(newPropId, newOwnership);
+    }
+  }
+
+  return scenarioId;
 }

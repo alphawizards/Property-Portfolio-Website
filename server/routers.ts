@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import * as calc from "./calculations";
+import * as calc from "@shared/calculations";
 import { TRPCError } from "@trpc/server";
 import { subscriptionRouter } from "./subscription-router";
 
@@ -122,8 +122,10 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      if (ctx.res) {
+        const cookieOptions = getSessionCookieOptions(ctx.req as any);
+        ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      }
       return {
         success: true,
       } as const;
@@ -135,6 +137,74 @@ export const appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return await db.getPortfoliosByUserId(ctx.user.id);
     }),
+
+    getDashboard: protectedProcedure
+      .input(z.object({ 
+        portfolioId: z.number().int().optional(),
+        scenarioId: z.number().int().optional()
+      }))
+      .query(async ({ input, ctx }) => {
+        let properties;
+        if (input.portfolioId) {
+          const portfolio = await db.getPortfolioById(input.portfolioId);
+          if (!portfolio || portfolio.userId !== ctx.user.id) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
+          }
+          properties = await db.getPropertiesByPortfolioId(input.portfolioId);
+        } else {
+          const scenarioId = input.scenarioId ?? null;
+          properties = await db.getPropertiesByUserId(ctx.user.id, scenarioId);
+        }
+
+        const currentYear = new Date().getFullYear();
+        
+        const propertiesWithFinancials = await Promise.all(
+          properties.map(async (property) => {
+            const data = await db.getCompletePropertyData(property.id);
+            if (!data) {
+              return {
+                ...property,
+                currentValue: property.purchasePrice,
+                totalDebt: 0,
+                equity: property.purchasePrice,
+                lvr: 0,
+              };
+            }
+            
+            const financials = calc.calculatePropertyEquity(
+              data.property,
+              data.loans,
+              data.valuations,
+              data.growthRates,
+              currentYear
+            );
+            
+            return {
+              ...property,
+              currentValue: financials.propertyValue,
+              totalDebt: financials.totalDebt,
+              equity: financials.equity,
+              lvr: financials.lvr,
+            };
+          })
+        );
+
+        const totalValue = propertiesWithFinancials.reduce((sum, p) => sum + p.currentValue, 0);
+        const totalDebt = propertiesWithFinancials.reduce((sum, p) => sum + p.totalDebt, 0);
+        const totalEquity = totalValue - totalDebt;
+
+        const goal = await db.getPortfolioGoal(ctx.user.id);
+
+        return {
+          totalValue: calc.centsToDollars(totalValue),
+          totalDebt: calc.centsToDollars(totalDebt),
+          totalEquity: calc.centsToDollars(totalEquity),
+          propertyCount: properties.length,
+          properties: propertiesWithFinancials,
+          projections: [], 
+          goal,
+        };
+      }),
 
     getById: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
       const portfolio = await db.getPortfolioById(input.id);
@@ -201,14 +271,38 @@ export const appRouter = router({
     }),
   }),
 
-  // ============ PROPERTY OPERATIONS ============
-  properties: router({
+  // ============ SCENARIO OPERATIONS ============
+  scenarios: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      return await db.getPropertiesByUserId(ctx.user.id);
+      return await db.getScenariosByUserId(ctx.user.id);
     }),
 
-    listWithFinancials: protectedProcedure.query(async ({ ctx }) => {
-      const properties = await db.getPropertiesByUserId(ctx.user.id);
+    clone: protectedProcedure
+      .input(z.object({ portfolioId: z.number().int(), name: z.string().min(1) }))
+      .mutation(async ({ input, ctx }) => {
+        const portfolio = await db.getPortfolioById(input.portfolioId);
+        if (!portfolio || portfolio.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
+        }
+        const scenarioId = await db.clonePortfolioToScenario(input.portfolioId, ctx.user.id, input.name);
+        return { id: scenarioId };
+      }),
+  }),
+
+  // ============ PROPERTY OPERATIONS ============
+  properties: router({
+    list: protectedProcedure
+      .input(z.object({ scenarioId: z.number().int().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        const scenarioId = input?.scenarioId ?? null;
+        return await db.getPropertiesByUserId(ctx.user.id, scenarioId);
+      }),
+
+    listWithFinancials: protectedProcedure
+      .input(z.object({ scenarioId: z.number().int().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        const scenarioId = input?.scenarioId ?? null;
+        const properties = await db.getPropertiesByUserId(ctx.user.id, scenarioId);
       const currentYear = new Date().getFullYear();
       
       const propertiesWithFinancials = await Promise.all(
@@ -704,10 +798,12 @@ export const appRouter = router({
           startYear: z.number().int(),
           endYear: z.number().int(),
           expenseGrowthOverride: z.number().nullable().optional(), // Override expense growth rate (as percentage, e.g., 3 for 3%)
+          scenarioId: z.number().int().optional(),
         })
       )
       .query(async ({ input, ctx }) => {
-        const portfolioData = await db.getUserPortfolioData(ctx.user.id);
+        const scenarioId = input.scenarioId ?? null;
+        const portfolioData = await db.getUserPortfolioData(ctx.user.id, scenarioId);
         if (!portfolioData) return [];
         return calc.generatePortfolioProjections(
           portfolioData.properties,
@@ -763,7 +859,7 @@ export const appRouter = router({
   }),
 
   // ============ LOAN SCENARIOS ============
-  scenarios: router({
+  loanScenarios: router({
     getByProperty: protectedProcedure
       .input(z.object({ propertyId: z.number().int() }))
       .query(async ({ input, ctx }) => {

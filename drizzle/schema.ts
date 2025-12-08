@@ -46,6 +46,7 @@ export const properties = mysqlTable("properties", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   portfolioId: int("portfolioId"),
+  scenarioId: int("scenarioId"),
   nickname: varchar("nickname", { length: 255 }).notNull(),
   address: text("address").notNull(),
   state: varchar("state", { length: 100 }).notNull(),
@@ -330,3 +331,35 @@ export const loanScenarios = mysqlTable("loan_scenarios", {
 
 export type LoanScenario = typeof loanScenarios.$inferSelect;
 export type InsertLoanScenario = typeof loanScenarios.$inferInsert;
+
+/**
+ * Documents - stores uploaded files for properties
+ */
+export const documents = mysqlTable("documents", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("property_id").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileUrl: varchar("file_url", { length: 512 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  mimeType: varchar("mime_type", { length: 100 }),
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+});
+
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;
+
+/**
+ * Scenarios - stores hypothetical portfolio versions
+ */
+export const scenarios = mysqlTable("scenarios", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  originalPortfolioId: int("originalPortfolioId"), // Link to source portfolio if cloned
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Scenario = typeof scenarios.$inferSelect;
+export type InsertScenario = typeof scenarios.$inferInsert;
