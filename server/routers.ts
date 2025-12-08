@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
-import * as calc from "@shared/calculations";
+import * as calc from "../shared/calculations";
 import { TRPCError } from "@trpc/server";
 import { subscriptionRouter } from "./subscription-router";
 
