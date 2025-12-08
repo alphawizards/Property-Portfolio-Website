@@ -11,6 +11,7 @@ import PropertyAnalysis from "@/pages/PropertyAnalysis";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ScenarioProvider } from "./contexts/ScenarioContext";
 
 function Router() {
   return (
@@ -32,10 +33,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <ScenarioProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ScenarioProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

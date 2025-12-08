@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
@@ -21,15 +22,22 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Plus, GitBranch } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { useScenario } from "@/contexts/ScenarioContext";
+import { trpc } from "@/lib/trpc";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: Users, label: "Properties", path: "/properties" },
+  { icon: GitBranch, label: "Comparison", path: "/comparison" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -115,6 +123,48 @@ function DashboardLayoutContent({
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
+  // Scenario Logic
+  const { currentScenarioId, setCurrentScenarioId } = useScenario();
+  const [isCreateScenarioOpen, setIsCreateScenarioOpen] = useState(false);
+  const [newScenarioName, setNewScenarioName] = useState("");
+  
+  // Fetch scenarios for the current property (assuming we want to list all scenarios for the user's portfolio)
+  // Note: The original requirement says "List user's scenarios". 
+  // Since scenarios are linked to a property in the DB schema (loanScenarios), but the requirement implies portfolio-level scenarios.
+  // Let's check the schema again. Ah, we added a `scenarios` table linked to `originalPortfolioId`.
+  // We need a way to list scenarios for the user. The router `scenarios` (which we renamed to `loanScenarios` in one place, but added `scenarios` router for cloning)
+  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const utils = trpc.useUtils();
+
+  const createScenarioMutation = trpc.scenarios.clone.useMutation({
+    onSuccess: (data) => {
+      toast.success("Scenario created successfully");
+      setIsCreateScenarioOpen(false);
+      setNewScenarioName("");
+      utils.scenarios.list.invalidate();
+      setCurrentScenarioId(data.id);
+    },
+    onError: (error) => {
+      toast.error(`Failed to create scenario: ${error.message}`);
+    }
+  });
+
+  
+  // We need the user's portfolios to know what to clone.
+  const { data: portfolios } = trpc.portfolios.list.useQuery();
+  const defaultPortfolioId = portfolios?.[0]?.id;
+
+  const submitCreateScenario = () => {
+    if (!defaultPortfolioId) {
+      toast.error("No portfolio found to clone");
+      return;
+    }
+    createScenarioMutation.mutate({
+      portfolioId: defaultPortfolioId,
+      name: newScenarioName
+    });
+  };
+
   useEffect(() => {
     if (isCollapsed) {
       setIsResizing(false);
@@ -171,7 +221,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    AssetMap
                   </span>
                 </div>
               ) : null}
@@ -179,6 +229,42 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
+            <div className="px-2 py-2">
+               {!isCollapsed && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between mb-4">
+                      <span className="truncate">
+                        {currentScenarioId 
+                          ? scenarios?.find(s => s.id === currentScenarioId)?.name 
+                          : "Live Portfolio"}
+                      </span>
+                      <GitBranch className="h-4 w-4 ml-2 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[200px]">
+                    <DropdownMenuItem onClick={() => setCurrentScenarioId(null)}>
+                      <span className="font-medium">Live Portfolio</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {scenarios?.map((scenario) => (
+                      <DropdownMenuItem 
+                        key={scenario.id} 
+                        onClick={() => setCurrentScenarioId(scenario.id)}
+                      >
+                        {scenario.name}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setIsCreateScenarioOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Scenario
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+               )}
+            </div>
+
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
@@ -259,6 +345,33 @@ function DashboardLayoutContent({
         )}
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>
+
+      <Dialog open={isCreateScenarioOpen} onOpenChange={setIsCreateScenarioOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Scenario</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Scenario Name</Label>
+              <Input
+                id="name"
+                value={newScenarioName}
+                onChange={(e) => setNewScenarioName(e.target.value)}
+                placeholder="e.g. Aggressive Growth Strategy"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateScenarioOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitCreateScenario} disabled={createScenarioMutation.isPending}>
+              {createScenarioMutation.isPending ? "Creating..." : "Create Scenario"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
