@@ -554,7 +554,6 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-        </motion.div>
 
         {/* Properties List */}
         {properties && properties.length > 0 && (
