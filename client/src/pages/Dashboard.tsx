@@ -627,7 +627,7 @@ export default function Dashboard() {
             </Card>
           </motion.div>
         )}
-      </div>
+      </div> {/* End container */}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
