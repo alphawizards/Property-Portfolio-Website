@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import * as db from "./db";
 import { getTierFromPriceId } from "./products";
+import { 
+  sendSubscriptionConfirmation, 
+  sendPaymentFailedEmail, 
+  sendCancellationEmail 
+} from "./_core/email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-11-17.clover",
@@ -69,6 +74,27 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             });
 
             console.log(`[Webhook] Updated user ${userId} to ${tier} tier`);
+
+            // Send subscription confirmation email
+            const user = await db.getUserById(parseInt(userId));
+            if (user?.email) {
+              try {
+                const billingCycle = tier === "PREMIUM_MONTHLY" ? "Monthly" : "Annual";
+                const nextBillingDate = (subscription as any).current_period_end 
+                  ? new Date((subscription as any).current_period_end * 1000).toLocaleDateString()
+                  : "N/A";
+                
+                await sendSubscriptionConfirmation(
+                  user.name || 'there',
+                  user.email,
+                  tier === "PREMIUM_MONTHLY" ? "Premium Monthly" : "Premium Annual",
+                  billingCycle,
+                  nextBillingDate
+                );
+              } catch (emailError) {
+                console.error('[Webhook] Failed to send subscription confirmation:', emailError);
+              }
+            }
           }
         }
 
@@ -115,6 +141,12 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           break;
         }
 
+        // Get current tier name before downgrading
+        const currentTier = user.subscriptionTier === "PREMIUM_MONTHLY" ? "Premium Monthly" : "Premium Annual";
+        const endDate = (subscription as any).current_period_end 
+          ? new Date((subscription as any).current_period_end * 1000).toLocaleDateString()
+          : new Date().toLocaleDateString();
+
         // Downgrade to free tier
         await db.updateUserSubscription(user.id, {
           subscriptionTier: "FREE",
@@ -124,6 +156,21 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         });
 
         console.log(`[Webhook] Downgraded user ${user.id} to FREE tier`);
+
+        // Send cancellation confirmation email
+        if (user.email) {
+          try {
+            await sendCancellationEmail(
+              user.name || 'there',
+              user.email,
+              currentTier,
+              endDate
+            );
+          } catch (emailError) {
+            console.error('[Webhook] Failed to send cancellation email:', emailError);
+          }
+        }
+        
         break;
       }
 
@@ -138,6 +185,20 @@ export async function handleStripeWebhook(req: Request, res: Response) {
               subscriptionStatus: "past_due",
             });
             console.log(`[Webhook] Marked user ${user.id} subscription as past_due`);
+
+            // Send payment failed notification
+            if (user.email) {
+              try {
+                const tierName = user.subscriptionTier === "PREMIUM_MONTHLY" ? "Premium Monthly" : "Premium Annual";
+                await sendPaymentFailedEmail(
+                  user.name || 'there',
+                  user.email,
+                  tierName
+                );
+              } catch (emailError) {
+                console.error('[Webhook] Failed to send payment failed email:', emailError);
+              }
+            }
           }
         }
 
