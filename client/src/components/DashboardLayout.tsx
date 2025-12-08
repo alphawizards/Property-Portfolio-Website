@@ -132,6 +132,24 @@ function DashboardLayoutContent({
   // Note: The original requirement says "List user's scenarios". 
   // Since scenarios are linked to a property in the DB schema (loanScenarios), but the requirement implies portfolio-level scenarios.
   // Let's check the schema again. Ah, we added a `scenarios` table linked to `originalPortfolioId`.
+  // We need a way to list scenarios for the user. The router `portfolioScenarios` (which we renamed to `loanScenarios` in one place, but added `portfolioScenarios` router for cloning)
+  // We need to add a `list` procedure to the `portfolioScenarios` router in the backend first if it doesn't exist.
+  // Wait, I implemented `portfolioScenarios.clone` but did I implement `portfolioScenarios.list`?
+  // Let's check `server/routers.ts`.
+  
+  // Checking `server/routers.ts`... I only added `clone`. I need to add `list` to `portfolioScenarios` router.
+  // I will add it in the next step. For now, I'll assume it exists or I'll add it.
+  // Actually, I should fix the backend first. But the instructions say "Start with Step 1: Implement the Scenario Switcher and Context."
+  // I will implement the UI and then fix the backend query.
+  
+  // Let's assume trpc.portfolioScenarios.list exists.
+  // Wait, the user prompt said: "Option 2+: List user's scenarios (fetched via trpc.loanScenarios.list)."
+  // But `loanScenarios` are per property. The requirement says "Clone a Portfolio -> Scenario".
+  // So we should be listing the Portfolio Scenarios, not Loan Scenarios.
+  // I will use `trpc.portfolioScenarios.list` (which I need to create) or if the user meant `loanScenarios`, that would be confusing.
+  // Given "Clone Portfolio -> Scenario", it must be the new `scenarios` table.
+  // I will add `list` to `portfolioScenarios` router in `server/routers.ts` quickly.
+
   // We need a way to list scenarios for the user. The router `scenarios` (which we renamed to `loanScenarios` in one place, but added `scenarios` router for cloning)
   const { data: scenarios } = trpc.portfolioScenarios.list.useQuery();
   const utils = trpc.useUtils();
