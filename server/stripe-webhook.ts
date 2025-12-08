@@ -7,6 +7,8 @@ import {
   sendPaymentFailedEmail, 
   sendCancellationEmail 
 } from "./_core/email";
+import { eq } from "drizzle-orm";
+import { users } from "../drizzle/schema";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-11-17.clover",
@@ -76,7 +78,9 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             console.log(`[Webhook] Updated user ${userId} to ${tier} tier`);
 
             // Send subscription confirmation email
-            const user = await db.getUserById(parseInt(userId));
+            const database = await db.getDb();
+            const userResult = database ? await database.select().from(users).where(eq(users.id, parseInt(userId))).limit(1) : [];
+            const user = userResult.length > 0 ? userResult[0] : null;
             if (user?.email) {
               try {
                 const billingCycle = tier === "PREMIUM_MONTHLY" ? "Monthly" : "Annual";
