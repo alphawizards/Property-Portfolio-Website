@@ -149,13 +149,6 @@ function DashboardLayoutContent({
     }
   });
 
-  const handleCreateScenario = () => {
-    if (!newScenarioName.trim()) return;
-    // We need a portfolioId to clone. For now, let's assume we clone the user's main portfolio.
-    // We need to fetch the user's portfolios first.
-    // This is getting complicated. Let's fetch portfolios.
-    // For MVP, let's assume the user has one main portfolio or we pick the first one.
-  };
   
   // We need the user's portfolios to know what to clone.
   const { data: portfolios } = trpc.portfolios.list.useQuery();
