@@ -57,7 +57,7 @@ export default function Dashboard() {
   const currentYear = new Date().getFullYear();
 
   // Use the new optimized dashboard query
-  const { data: dashboardData, isLoading: isDashboardLoading } = trpc.portfolios.getDashboard.useQuery({
+  const { data: dashboardData } = trpc.portfolios.getDashboard.useQuery({
     scenarioId: currentScenarioId ?? undefined,
   });
 
