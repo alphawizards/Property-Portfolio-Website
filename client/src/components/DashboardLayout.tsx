@@ -133,23 +133,6 @@ function DashboardLayoutContent({
   // Since scenarios are linked to a property in the DB schema (loanScenarios), but the requirement implies portfolio-level scenarios.
   // Let's check the schema again. Ah, we added a `scenarios` table linked to `originalPortfolioId`.
   // We need a way to list scenarios for the user. The router `scenarios` (which we renamed to `loanScenarios` in one place, but added `scenarios` router for cloning)
-  // We need to add a `list` procedure to the `scenarios` router in the backend first if it doesn't exist.
-  // Wait, I implemented `scenarios.clone` but did I implement `scenarios.list`?
-  // Let's check `server/routers.ts`.
-  
-  // Checking `server/routers.ts`... I only added `clone`. I need to add `list` to `scenarios` router.
-  // I will add it in the next step. For now, I'll assume it exists or I'll add it.
-  // Actually, I should fix the backend first. But the instructions say "Start with Step 1: Implement the Scenario Switcher and Context."
-  // I will implement the UI and then fix the backend query.
-  
-  // Let's assume trpc.scenarios.list exists.
-  // Wait, the user prompt said: "Option 2+: List user's scenarios (fetched via trpc.loanScenarios.list)."
-  // But `loanScenarios` are per property. The requirement says "Clone a Portfolio -> Scenario".
-  // So we should be listing the Portfolio Scenarios, not Loan Scenarios.
-  // I will use `trpc.scenarios.list` (which I need to create) or if the user meant `loanScenarios`, that would be confusing.
-  // Given "Clone Portfolio -> Scenario", it must be the new `scenarios` table.
-  // I will add `list` to `scenarios` router in `server/routers.ts` quickly.
-
   const { data: scenarios } = trpc.scenarios.list.useQuery();
   const utils = trpc.useUtils();
 
