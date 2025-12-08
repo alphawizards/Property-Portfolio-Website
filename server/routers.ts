@@ -272,7 +272,7 @@ export const appRouter = router({
   }),
 
   // ============ SCENARIO OPERATIONS ============
-  scenarios: router({
+  portfolioScenarios: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return await db.getScenariosByUserId(ctx.user.id);
     }),
