@@ -22,7 +22,19 @@ import { useScenario } from "@/contexts/ScenarioContext";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { currentScenarioId } = useScenario();
+  
+  let scenarioContext;
+  try {
+    scenarioContext = useScenario();
+  } catch (e) {
+    return (
+      <div style={{ padding: "2rem", color: "red" }}>
+        Error: Dashboard must be rendered within a ScenarioProvider.
+      </div>
+    );
+  }
+  const { currentScenarioId } = scenarioContext;
+  
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");

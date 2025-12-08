@@ -5,16 +5,17 @@ import { ArrowRight, TrendingUp, DollarSign, Building2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export default function Comparison() {
-  const { currentScenarioId, scenarios } = useScenario();
+  const { currentScenarioId } = useScenario();
+  const { data: scenarios } = trpc.portfolioScenarios.list.useQuery();
   
-  // Fetch Live Data (scenarioId = null)
+  // Fetch Live Data (scenarioId = undefined means live data)
   const { data: liveData, isLoading: isLiveLoading } = trpc.portfolios.getDashboard.useQuery({
-    scenarioId: null,
+    scenarioId: undefined,
   });
 
   // Fetch Scenario Data (only if scenario selected)
   const { data: scenarioData, isLoading: isScenarioLoading } = trpc.portfolios.getDashboard.useQuery(
-    { scenarioId: currentScenarioId! },
+    { scenarioId: currentScenarioId ?? undefined },
     { enabled: !!currentScenarioId }
   );
 
@@ -33,21 +34,29 @@ export default function Comparison() {
     return <div className="p-8">Loading comparison...</div>;
   }
 
+  // Helper function to safely parse currency values (handles both numbers and strings)
+  const parseValue = (val: number | string | undefined): number => {
+    if (val === undefined) return 0;
+    if (typeof val === 'number') return val;
+    const parsed = parseFloat(val.replace(/[^0-9.-]+/g, ""));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   const comparisonData = [
     {
       name: "Total Value",
-      Live: parseFloat(liveData?.totalValue.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalValue.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: parseValue(liveData?.totalValue),
+      Scenario: parseValue(scenarioData?.totalValue),
     },
     {
       name: "Total Debt",
-      Live: parseFloat(liveData?.totalDebt.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalDebt.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: parseValue(liveData?.totalDebt),
+      Scenario: parseValue(scenarioData?.totalDebt),
     },
     {
       name: "Net Equity",
-      Live: parseFloat(liveData?.totalEquity.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalEquity.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: parseValue(liveData?.totalEquity),
+      Scenario: parseValue(scenarioData?.totalEquity),
     },
   ];
 
@@ -66,21 +75,21 @@ export default function Comparison() {
         {/* Comparison Cards */}
         <ComparisonCard 
           title="Total Value" 
-          live={liveData?.totalValue || "$0"} 
-          scenario={scenarioData?.totalValue || "$0"} 
+          live={liveData?.totalValue || 0} 
+          scenario={scenarioData?.totalValue || 0} 
           icon={DollarSign}
         />
         <ComparisonCard 
           title="Total Debt" 
-          live={liveData?.totalDebt || "$0"} 
-          scenario={scenarioData?.totalDebt || "$0"} 
+          live={liveData?.totalDebt || 0} 
+          scenario={scenarioData?.totalDebt || 0} 
           icon={TrendingUp}
           inverse // Lower debt is better usually, but context depends.
         />
         <ComparisonCard 
           title="Net Equity" 
-          live={liveData?.totalEquity || "$0"} 
-          scenario={scenarioData?.totalEquity || "$0"} 
+          live={liveData?.totalEquity || 0} 
+          scenario={scenarioData?.totalEquity || 0} 
           icon={Building2}
         />
       </div>
@@ -110,13 +119,15 @@ export default function Comparison() {
 }
 
 function ComparisonCard({ title, live, scenario, icon: Icon, inverse = false }: any) {
-  const liveVal = parseFloat(live.replace(/[^0-9.-]+/g, ""));
-  const scenarioVal = parseFloat(scenario.replace(/[^0-9.-]+/g, ""));
+  const liveVal = typeof live === 'number' ? live : 0;
+  const scenarioVal = typeof scenario === 'number' ? scenario : 0;
   const diff = scenarioVal - liveVal;
   const percent = liveVal !== 0 ? (diff / liveVal) * 100 : 0;
   
   const isPositive = diff > 0;
   const isGood = inverse ? !isPositive : isPositive;
+  
+  const formatCurrency = (val: number) => val.toLocaleString("en-US", { style: "currency", currency: "USD" });
   
   return (
     <Card>
@@ -127,16 +138,16 @@ function ComparisonCard({ title, live, scenario, icon: Icon, inverse = false }: 
       <CardContent>
         <div className="flex justify-between items-end">
           <div>
-            <div className="text-2xl font-bold">{scenario}</div>
+            <div className="text-2xl font-bold">{formatCurrency(scenarioVal)}</div>
             <p className="text-xs text-muted-foreground">Scenario</p>
           </div>
           <div className="text-right">
-            <div className="text-sm font-medium text-gray-500">{live}</div>
+            <div className="text-sm font-medium text-gray-500">{formatCurrency(liveVal)}</div>
             <p className="text-xs text-muted-foreground">Live</p>
           </div>
         </div>
         <div className={`mt-4 text-xs flex items-center ${isGood ? "text-green-600" : "text-red-600"}`}>
-          {diff > 0 ? "+" : ""}{diff.toLocaleString("en-US", { style: "currency", currency: "USD" })} ({percent.toFixed(1)}%)
+          {diff > 0 ? "+" : ""}{formatCurrency(diff)} ({percent.toFixed(1)}%)
         </div>
       </CardContent>
     </Card>
