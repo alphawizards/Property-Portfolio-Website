@@ -5,7 +5,8 @@ import { ArrowRight, TrendingUp, DollarSign, Building2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export default function Comparison() {
-  const { currentScenarioId, scenarios } = useScenario();
+  const { currentScenarioId } = useScenario();
+  const { data: scenarios } = trpc.portfolioScenarios.list.useQuery();
   
   // Fetch Live Data (scenarioId = null)
   const { data: liveData, isLoading: isLiveLoading } = trpc.portfolios.getDashboard.useQuery({
@@ -14,7 +15,7 @@ export default function Comparison() {
 
   // Fetch Scenario Data (only if scenario selected)
   const { data: scenarioData, isLoading: isScenarioLoading } = trpc.portfolios.getDashboard.useQuery(
-    { scenarioId: currentScenarioId! },
+    { scenarioId: currentScenarioId },
     { enabled: !!currentScenarioId }
   );
 
@@ -33,21 +34,28 @@ export default function Comparison() {
     return <div className="p-8">Loading comparison...</div>;
   }
 
+  // Helper function to safely parse currency strings
+  const parseValue = (str: string | undefined) => {
+    if (!str) return 0;
+    const val = parseFloat(str.replace(/[^0-9.-]+/g, ""));
+    return isNaN(val) ? 0 : val;
+  };
+
   const comparisonData = [
     {
       name: "Total Value",
-      Live: parseFloat(liveData?.totalValue.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalValue.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: parseValue(liveData?.totalValue),
+      Scenario: parseValue(scenarioData?.totalValue),
     },
     {
       name: "Total Debt",
-      Live: parseFloat(liveData?.totalDebt.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalDebt.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: parseValue(liveData?.totalDebt),
+      Scenario: parseValue(scenarioData?.totalDebt),
     },
     {
       name: "Net Equity",
-      Live: parseFloat(liveData?.totalEquity.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalEquity.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: parseValue(liveData?.totalEquity),
+      Scenario: parseValue(scenarioData?.totalEquity),
     },
   ];
 
@@ -110,8 +118,13 @@ export default function Comparison() {
 }
 
 function ComparisonCard({ title, live, scenario, icon: Icon, inverse = false }: any) {
-  const liveVal = parseFloat(live.replace(/[^0-9.-]+/g, ""));
-  const scenarioVal = parseFloat(scenario.replace(/[^0-9.-]+/g, ""));
+  const parseValue = (str: string) => {
+    const val = parseFloat(str.replace(/[^0-9.-]+/g, ""));
+    return isNaN(val) ? 0 : val;
+  };
+  
+  const liveVal = parseValue(live);
+  const scenarioVal = parseValue(scenario);
   const diff = scenarioVal - liveVal;
   const percent = liveVal !== 0 ? (diff / liveVal) * 100 : 0;
   
