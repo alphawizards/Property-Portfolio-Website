@@ -21,6 +21,17 @@ export async function createContext(
     user = null;
   }
 
+  // DEMO MODE: Auto-login as demo user if no authentication
+  // This allows viewing the seeded data without OAuth setup
+  if (!user && process.env.NODE_ENV === 'development' && process.env.DEMO_MODE === 'true') {
+    const { getUserByOpenId } = await import('../db');
+    const demoUser = await getUserByOpenId('demo-user-golden-master');
+    if (demoUser) {
+      console.log('[DEMO MODE] Auto-authenticated as demo user');
+      user = demoUser;
+    }
+  }
+
   return {
     req: opts.req,
     res: opts.res,
