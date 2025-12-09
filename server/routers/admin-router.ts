@@ -7,7 +7,7 @@ import { router, protectedProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { users, properties } from "../../drizzle/schema";
+import { users, properties } from "../../drizzle/schema-postgres";
 import { eq, count, desc, sql } from "drizzle-orm";
 
 // Middleware to check admin role

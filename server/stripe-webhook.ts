@@ -8,7 +8,7 @@ import {
   sendCancellationEmail 
 } from "./_core/email";
 import { eq } from "drizzle-orm";
-import { users } from "../drizzle/schema";
+import { users } from "../drizzle/schema-postgres";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-11-17.clover",

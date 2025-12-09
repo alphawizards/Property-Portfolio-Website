@@ -1,0 +1,12 @@
+# Allow server/ so API functions can use it
+# server/   ← REMOVED - API routes need this code
+
+# Ignore build artifacts but keep the public output
+dist/
+!dist/public/
+
+# Docs and configs
+*.md
+.env
+.env.*
+node_modules/

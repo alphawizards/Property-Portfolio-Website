@@ -1,30 +1,22 @@
 import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, DollarSign, TrendingUp, Target, Plus, Trash2, ArrowUpRight, Calculator, PieChart } from "lucide-react";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Link } from "wouter";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceDot } from "recharts";
+import { useLocation } from "wouter";
 import { useScenario } from "@/contexts/ScenarioContext";
-import { motion } from "framer-motion";
-import { BreathingChart, PropertyGrowthChart } from "@/components/charts";
-import { ProjectionsTable } from "@/components/ProjectionsTable";
+import { DashboardView } from "@/components/DashboardView";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  }
+
+  if (!user) {
+    setLocation("/");
+    return null;
+  }
   const { currentScenarioId } = useScenario();
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
@@ -89,17 +81,6 @@ export default function Dashboard() {
     }),
     { totalValue: 0, totalDebt: 0, totalEquity: 0, propertyCount: 0 }
   ) || { totalValue: 0, totalDebt: 0, totalEquity: 0, propertyCount: 0 };
-
-  const currentSummary = projections && projections.length > 0 ? projections[0] : null;
-
-  // Format currency for display
-  const formatCurrency = (cents: number) => {
-    const dollars = cents / 100;
-    if (dollars >= 1000000) {
-      return `$${(dollars / 1000000).toFixed(2)}m`;
-    }
-    return `$${(dollars / 1000).toFixed(0)}k`;
-  };
 
   // Prepare chart data - filter by selected property if applicable
   const chartData = selectedPropertyId === "all"
@@ -641,27 +622,46 @@ export default function Dashboard() {
         )}
       </div> {/* End container */}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Property</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{propertyToDelete?.name}"? This action cannot be undone.
-              All associated data including loans, rental income, and expense logs will be permanently deleted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      // Find this property's data in the projection
+      const propertyData = p.properties.find(prop => prop.propertyId === selectedProp.id);
+      if (!propertyData) return null;
+
+      return {
+        year: `FY ${p.year.toString().slice(-2)}`,
+        fullYear: p.year,
+        "Portfolio Value": propertyData.value / 100,
+        "Total Debt": propertyData.debt / 100,
+        "Portfolio Equity": propertyData.equity / 100,
+        "Net Cashflow": propertyData.cashflow / 100,
+        // For single property, we need to get detailed cashflow from backend
+        // For now, approximate based on net cashflow
+        "Rental Income": Math.max(0, propertyData.cashflow / 100 * 3), // Rough estimate
+        "Expenses": Math.max(0, -propertyData.cashflow / 100 * 0.5), // Rough estimate
+        "Loan Repayments": Math.max(0, -propertyData.cashflow / 100 * 1.5), // Rough estimate
+      };
+    }).filter(Boolean) || [];
+
+  return (
+    <DashboardView
+      user={user}
+      properties={properties ?? []}
+      summary={filteredSummary}
+      goal={goal}
+      chartData={chartData}
+      selectedYears={selectedYears}
+      setSelectedYears={setSelectedYears}
+      viewMode={viewMode}
+      setViewMode={setViewMode}
+      selectedPropertyId={selectedPropertyId}
+      setSelectedPropertyId={setSelectedPropertyId}
+      expenseGrowthOverride={expenseGrowthOverride}
+      setExpenseGrowthOverride={setExpenseGrowthOverride}
+      deleteDialogOpen={deleteDialogOpen}
+      setDeleteDialogOpen={setDeleteDialogOpen}
+      propertyToDelete={propertyToDelete}
+      onDeleteClick={handleDeleteClick}
+      onConfirmDelete={confirmDelete}
+      isDemo={false}
+    />
   );
 }
