@@ -1,30 +1,66 @@
-import pg from 'pg';
-import { config } from 'dotenv';
+/**
+ * Test PostgreSQL database connection
+ * Tests connection to PlanetScale PostgreSQL database
+ */
 
-config();
+import "dotenv/config";
+import pg from "pg";
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://user:password@localhost:5432/database';
+const { Client } = pg;
 
-console.log('🔌 Testing PlanetScale PostgreSQL connection...\n');
-console.log('Connection string:', connectionString.replace(/:[^:@]+@/, ':****@'));
-
-const client = new pg.Client({ connectionString });
-
-client.connect()
-  .then(() => {
-    console.log('✅ Connected successfully!');
-    return client.query('SELECT version()');
-  })
-  .then(result => {
-    console.log('Database version:', result.rows[0].version);
-    return client.end();
-  })
-  .then(() => {
-    console.log('✅ Connection closed');
-    process.exit(0);
-  })
-  .catch(err => {
-    console.error('❌ Connection failed:', err.message);
-    console.error('Error code:', err.code);
+async function testConnection() {
+  console.log("🔌 Testing PostgreSQL database connection...\n");
+  
+  const dbUrl = process.env.DATABASE_URL;
+  console.log("Database URL:", dbUrl ? `${dbUrl.substring(0, 40)}...` : "NOT SET");
+  
+  if (!dbUrl) {
+    console.error("❌ DATABASE_URL is not set in .env file");
     process.exit(1);
+  }
+
+  const client = new Client({
+    connectionString: dbUrl,
   });
+
+  try {
+    console.log("Attempting connection...");
+    await client.connect();
+    console.log("✅ Connected!");
+    
+    // Test query
+    console.log("\nExecuting test query...");
+    const result = await client.query("SELECT 1 + 1 AS result");
+    console.log("Query result:", result.rows[0]);
+    
+    // Check for existing tables
+    console.log("\nChecking existing tables...");
+    const tablesResult = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name;
+    `);
+    
+    console.log(`Found ${tablesResult.rows.length} table(s)`);
+    if (tablesResult.rows.length > 0) {
+      console.log("Existing tables:", tablesResult.rows.map(r => r.table_name));
+    } else {
+      console.log("Database is empty - ready for schema creation");
+    }
+    
+    await client.end();
+    console.log("\n✅ Database connection test successful!");
+    process.exit(0);
+    
+  } catch (error) {
+    console.error("\n❌ Connection failed:");
+    console.error("Error:", error.message);
+    if (error.code) console.error("Code:", error.code);
+    
+    await client.end().catch(() => {});
+    process.exit(1);
+  }
+}
+
+testConnection();

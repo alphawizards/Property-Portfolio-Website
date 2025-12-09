@@ -5,7 +5,7 @@
  * Works with existing schema (users table with subscriptionTier enum).
  */
 
-import { users, properties } from "../drizzle/schema";
+import { users, properties } from "../drizzle/schema-postgres";
 import { eq, and, count } from "drizzle-orm";
 import type { MySql2Database } from "drizzle-orm/mysql2";
 

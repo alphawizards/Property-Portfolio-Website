@@ -1,7 +1,8 @@
 import { eq, and, desc, asc, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "../drizzle/schema-postgres";
+import * as schema from "../drizzle/schema";
+import * as relations from "../drizzle/relations";
 import {
   InsertUser,
   users,
@@ -38,16 +39,16 @@ import {
   InsertLoanScenario,
   scenarios,
   InsertScenario,
-} from "../drizzle/schema-postgres";
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle<typeof schema>> | null = null;
+let _db: ReturnType<typeof drizzle<typeof schema & typeof relations>> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       const client = postgres(process.env.DATABASE_URL);
-      _db = drizzle(client, { schema });
+      _db = drizzle(client, { schema: { ...schema, ...relations } });
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -108,8 +109,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onConflictDoUpdate({
-      target: users.openId,
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
   } catch (error) {
@@ -136,8 +136,8 @@ export async function createPortfolio(portfolio: InsertPortfolio) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(portfolios).values(portfolio).returning({ id: portfolios.id });
-  return result[0].id;
+  const result = await db.insert(portfolios).values(portfolio);
+  return parseInt(result.insertId);
 }
 
 export async function getPortfoliosByUserId(userId: number) {
@@ -182,8 +182,8 @@ export async function createProperty(property: InsertProperty) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(properties).values(property).returning({ id: properties.id });
-  return result[0].id;
+  const result = await db.insert(properties).values(property);
+  return parseInt(result.insertId);
 }
 
 export async function getPropertiesByUserId(userId: number, scenarioId?: number | null) {
@@ -267,8 +267,7 @@ export async function upsertPurchaseCosts(costs: InsertPurchaseCosts) {
   await db
     .insert(purchaseCosts)
     .values(costs)
-    .onConflictDoUpdate({
-      target: purchaseCosts.propertyId,
+    .onDuplicateKeyUpdate({
       set: {
         agentFee: costs.agentFee,
         stampDuty: costs.stampDuty,
@@ -293,8 +292,8 @@ export async function addPropertyUsagePeriod(period: InsertPropertyUsagePeriod) 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(propertyUsagePeriods).values(period).returning({ id: propertyUsagePeriods.id });
-  return result[0].id;
+  const result = await db.insert(propertyUsagePeriods).values(period);
+  return parseInt(result.insertId);
 }
 
 export async function getPropertyUsagePeriods(propertyId: number) {
@@ -317,8 +316,8 @@ export async function createLoan(loan: InsertLoan) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(loans).values(loan).returning({ id: loans.id });
-  return result[0].id;
+  const result = await db.insert(loans).values(loan);
+  return parseInt(result.insertId);
 }
 
 export async function getPropertyLoans(propertyId: number) {
@@ -356,8 +355,8 @@ export async function addPropertyValuation(valuation: InsertPropertyValuation) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(propertyValuations).values(valuation).returning({ id: propertyValuations.id });
-  return result[0].id;
+  const result = await db.insert(propertyValuations).values(valuation);
+  return parseInt(result.insertId);
 }
 
 export async function getPropertyValuations(propertyId: number) {
@@ -380,8 +379,8 @@ export async function addGrowthRatePeriod(period: InsertGrowthRatePeriod) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(growthRatePeriods).values(period).returning({ id: growthRatePeriods.id });
-  return result[0].id;
+  const result = await db.insert(growthRatePeriods).values(period);
+  return parseInt(result.insertId);
 }
 
 export async function getGrowthRatePeriods(propertyId: number) {
@@ -404,8 +403,8 @@ export async function addRentalIncome(income: InsertRentalIncome) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(rentalIncome).values(income).returning({ id: rentalIncome.id });
-  return result[0].id;
+  const result = await db.insert(rentalIncome).values(income);
+  return parseInt(result.insertId);
 }
 
 export async function getRentalIncome(propertyId: number) {
@@ -435,8 +434,8 @@ export async function createExpenseLog(expense: InsertExpenseLog) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(expenseLogs).values(expense).returning({ id: expenseLogs.id });
-  return result[0].id;
+  const result = await db.insert(expenseLogs).values(expense);
+  return parseInt(result.insertId);
 }
 
 export async function getExpenseLogs(propertyId: number) {
@@ -460,8 +459,8 @@ export async function addExpenseBreakdown(breakdown: InsertExpenseBreakdown) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(expenseBreakdown).values(breakdown).returning({ id: expenseBreakdown.id });
-  return result[0].id;
+  const result = await db.insert(expenseBreakdown).values(breakdown);
+  return parseInt(result.insertId);
 }
 
 export async function getExpenseBreakdown(expenseLogId: number) {
@@ -531,8 +530,8 @@ export async function addDepreciationSchedule(schedule: InsertDepreciationSchedu
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(depreciationSchedule).values(schedule).returning({ id: depreciationSchedule.id });
-  return result[0].id;
+  const result = await db.insert(depreciationSchedule).values(schedule);
+  return parseInt(result.insertId);
 }
 
 export async function getDepreciationSchedule(propertyId: number) {
@@ -555,8 +554,8 @@ export async function addCapitalExpenditure(capex: InsertCapitalExpenditure) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(capitalExpenditure).values(capex).returning({ id: capitalExpenditure.id });
-  return result[0].id;
+  const result = await db.insert(capitalExpenditure).values(capex);
+  return parseInt(result.insertId);
 }
 
 export async function getCapitalExpenditure(propertyId: number) {
@@ -582,8 +581,7 @@ export async function upsertPortfolioGoal(goal: InsertPortfolioGoal) {
   await db
     .insert(portfolioGoals)
     .values(goal)
-    .onConflictDoUpdate({
-      target: portfolioGoals.userId,
+    .onDuplicateKeyUpdate({
       set: {
         goalYear: goal.goalYear,
         targetEquity: goal.targetEquity,
@@ -730,8 +728,8 @@ export async function saveLoanScenario(scenario: InsertLoanScenario) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(loanScenarios).values(scenario).returning({ id: loanScenarios.id });
-  return result[0].id;
+  const result = await db.insert(loanScenarios).values(scenario);
+  return Number((result as any).insertId);
 }
 
 export async function getLoanScenariosByProperty(propertyId: number) {
@@ -773,8 +771,8 @@ export async function createScenario(scenario: InsertScenario) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(scenarios).values(scenario).returning({ id: scenarios.id });
-  return result[0].id;
+  const result = await db.insert(scenarios).values(scenario);
+  return parseInt(result.insertId);
 }
 
 export async function clonePortfolioToScenario(portfolioId: number, userId: number, scenarioName: string) {
@@ -788,8 +786,8 @@ export async function clonePortfolioToScenario(portfolioId: number, userId: numb
       userId,
       originalPortfolioId: portfolioId,
       name: scenarioName,
-    }).returning({ id: scenarios.id });
-    const scenarioId = scenarioInsertResult[0].id;
+    });
+    const scenarioId = parseInt(scenarioInsertResult.insertId);
 
     // 2. Get Properties
     const propertiesList = await tx.select().from(properties).where(eq(properties.portfolioId, portfolioId));
@@ -803,8 +801,8 @@ export async function clonePortfolioToScenario(portfolioId: number, userId: numb
         portfolioId: null, // Detach from portfolio
         scenarioId: scenarioId, // Attach to scenario
       };
-      const newPropInsertResult = await tx.insert(properties).values(newPropData).returning({ id: properties.id });
-      const newPropId = newPropInsertResult[0].id;
+      const newPropInsertResult = await tx.insert(properties).values(newPropData);
+      const newPropId = parseInt(newPropInsertResult.insertId);
 
       // Clone Loans
       const loansList = await tx.select().from(loans).where(eq(loans.propertyId, oldId));
