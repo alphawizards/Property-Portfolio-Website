@@ -1,0 +1,17 @@
+# Vercel should ignore server-side code
+server/
+dist/index.js
+dist/*.js
+!dist/public/
+
+# Development files
+*.ts
+*.tsx
+!client/
+
+# Docs and configs
+*.md
+.env
+.env.*
+node_modules/
+pnpm-lock.yaml
