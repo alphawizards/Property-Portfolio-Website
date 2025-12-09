@@ -1,5 +1,7 @@
-# Vercel should ignore server-side code (not deploying API to Vercel functions)
-server/
+# Allow server/ so API functions can use it
+# server/   ← REMOVED - API routes need this code
+
+# Ignore build artifacts but keep the public output
 dist/
 !dist/public/
 
