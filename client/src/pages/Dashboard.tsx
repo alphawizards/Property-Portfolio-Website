@@ -554,6 +554,7 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+        </motion.div> {/* End Chart Controls */}
 
         {/* Properties List */}
         {properties && properties.length > 0 && (
