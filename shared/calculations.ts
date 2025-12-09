@@ -272,8 +272,12 @@ export function calculateExpensesForYear(
     let annualAmount = 0;
     if (expense.frequency === "Monthly") {
       annualAmount = currentAmount * 12;
-    } else if (expense.frequency === "Annual") {
+    } else if (expense.frequency === "Annual" || expense.frequency === "Annually") {
       annualAmount = currentAmount;
+    } else if (expense.frequency === "Weekly") {
+      annualAmount = currentAmount * 52;
+    } else if (expense.frequency === "Quarterly") {
+      annualAmount = currentAmount * 4;
     } else if (expense.frequency === "OneTime") {
       // One-time expenses only apply in the year they occur
       if (yearsElapsed === 0) {
