@@ -8,10 +8,12 @@ dist/*.js
 *.ts
 *.tsx
 !client/
+!vite.config.ts
+!drizzle.config.ts
 
 # Docs and configs
 *.md
 .env
 .env.*
 node_modules/
-pnpm-lock.yaml
+# pnpm-lock.yaml  <-- REMOVED - Vercel needs this for frozen install
