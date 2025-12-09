@@ -59,6 +59,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <FeedbackWidget />
           </TooltipProvider>
         </ScenarioProvider>
       </ThemeProvider>

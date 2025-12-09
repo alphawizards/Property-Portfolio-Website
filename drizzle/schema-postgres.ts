@@ -29,6 +29,8 @@ export const repaymentFrequencyEnum = pgEnum('repaymentFrequency', ['Monthly', '
 export const rentalFrequencyEnum = pgEnum('frequency', ['Monthly', 'Weekly', 'Fortnightly']);
 export const expenseFrequencyEnum = pgEnum('expenseFrequency', ['Monthly', 'Annual', 'OneTime', 'Weekly', 'Quarterly', 'Annually']);
 export const extraRepaymentFrequencyEnum = pgEnum('extraRepaymentFrequency', ['Monthly', 'Fortnightly', 'Weekly', 'Annually']);
+export const feedbackCategoryEnum = pgEnum('feedbackCategory', ['Bug', 'Feature Request', 'General', 'Complaint', 'Praise', 'Other']);
+export const feedbackStatusEnum = pgEnum('feedbackStatus', ['New', 'In Progress', 'Resolved', 'Closed']);
 
 // ============ USERS TABLE ============
 
@@ -101,6 +103,53 @@ export const propertyOwnership = pgTable("property_ownership", {
 
 export type PropertyOwnership = typeof propertyOwnership.$inferSelect;
 export type InsertPropertyOwnership = typeof propertyOwnership.$inferInsert;
+
+// ============ FEEDBACK TABLE ============
+
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId"), // nullable for anonymous feedback
+  category: feedbackCategoryEnum("category").default('General').notNull(),
+  rating: integer("rating"), // 1-5 stars, nullable
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  userEmail: varchar("userEmail", { length: 320 }), // for anonymous users
+  userName: varchar("userName", { length: 255 }), // for anonymous users
+  status: feedbackStatusEnum("status").default('New').notNull(),
+  adminNotes: text("adminNotes"),
+  resolvedAt: timestamp("resolvedAt"),
+  resolvedBy: integer("resolvedBy"), // admin user ID
+  source: varchar("source", { length: 50 }).default('in-app'), // 'in-app', 'tally', 'email'
+  metadata: text("metadata"), // JSON string for extra data (browser, page URL, etc)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;
+
+// ============ BROADCAST EMAILS TABLE ============
+
+export const broadcastEmails = pgTable("broadcast_emails", {
+  id: serial("id").primaryKey(),
+  createdBy: integer("createdBy").notNull(), // admin user ID
+  subject: varchar("subject", { length: 255 }).notNull(),
+  content: text("content").notNull(), // HTML content
+  recipientFilter: varchar("recipientFilter", { length: 100 }), // 'all', 'free', 'premium', 'specific'
+  recipientCount: integer("recipientCount").default(0),
+  sentCount: integer("sentCount").default(0),
+  openCount: integer("openCount").default(0),
+  clickCount: integer("clickCount").default(0),
+  loopsTransactionalId: varchar("loopsTransactionalId", { length: 255 }), // Loops.so campaign ID
+  status: varchar("status", { length: 50 }).default('draft'), // 'draft', 'scheduled', 'sending', 'sent', 'failed'
+  scheduledAt: timestamp("scheduledAt"),
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type BroadcastEmail = typeof broadcastEmails.$inferSelect;
+export type InsertBroadcastEmail = typeof broadcastEmails.$inferInsert;
 
 // ============ PURCHASE COSTS TABLE ============
 
