@@ -1,10 +1,10 @@
 import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, DollarSign, TrendingUp, Target, Plus, Trash2 } from "lucide-react";
+import { Building2, DollarSign, TrendingUp, Target, Plus, Trash2, ArrowUpRight, Calculator, PieChart } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -19,6 +19,8 @@ import {
 import { Link } from "wouter";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceDot } from "recharts";
 import { useScenario } from "@/contexts/ScenarioContext";
+import { motion } from "framer-motion";
+import { BreathingChart, PropertyGrowthChart } from "@/components/charts";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -136,118 +138,169 @@ export default function Dashboard() {
       }).filter(Boolean) || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+      <motion.header 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="border-b bg-card px-6 py-4"
+      >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Property Portfolio Analyzer</h1>
-            <p className="text-sm text-gray-500 mt-1">Welcome back, {user?.name}</p>
+            <h1 className="text-4xl font-bold tracking-tight">Property Portfolio Analyzer</h1>
+            <p className="mt-2 text-muted-foreground">Welcome back, {user?.name}</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/properties/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
+            <Link href="/properties/wizard">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
                 Add Property
               </Button>
             </Link>
             <Link href="/comparison">
-              <Button variant="outline">Compare Investments</Button>
+              <Button variant="outline">
+                <PieChart className="mr-2 h-4 w-4" />
+                Compare Investments
+              </Button>
             </Link>
             <Link href="/subscription">
               <Button variant="outline">Subscription</Button>
             </Link>
-            <Button variant="outline">Members</Button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto space-y-6 py-8">
         {/* Summary Cards */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Portfolio</h2>
-          <p className="text-sm text-gray-500 mb-4">Last updated: {new Date().toLocaleDateString()}</p>
+        <div>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <h2 className="text-2xl font-semibold tracking-tight">Current Portfolio</h2>
+            <p className="text-sm text-muted-foreground mt-1">Last updated: {new Date().toLocaleDateString()}</p>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card className="bg-blue-50 border-blue-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-blue-900 flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Properties
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-blue-900">{filteredSummary.propertyCount}</div>
-              </CardContent>
-            </Card>
+          <div className="mt-4 grid gap-4 md:grid-cols-5">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Properties</CardTitle>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono text-2xl font-bold">{filteredSummary.propertyCount}</div>
+                  <p className="text-xs text-muted-foreground">Active properties</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-green-50 border-green-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-green-900 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  Total Value
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-900">{formatCurrency(filteredSummary.totalValue)}</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-fintech-growth" />
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono text-2xl font-bold">{formatCurrency(filteredSummary.totalValue)}</div>
+                  <p className="text-xs text-muted-foreground">Portfolio value</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-pink-50 border-pink-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-pink-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Debt
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-pink-900">{formatCurrency(filteredSummary.totalDebt)}</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Equity</CardTitle>
+                  <ArrowUpRight className="h-4 w-4 text-fintech-yield" />
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono text-2xl font-bold text-fintech-growth">{formatCurrency(filteredSummary.totalEquity)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {((filteredSummary.totalEquity / filteredSummary.totalValue) * 100).toFixed(1)}% of total value
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-yellow-50 border-yellow-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-yellow-900 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Equity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-yellow-900">{formatCurrency(filteredSummary.totalEquity)}</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Debt</CardTitle>
+                  <Calculator className="h-4 w-4 text-fintech-debt" />
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono text-2xl font-bold text-fintech-debt">{formatCurrency(filteredSummary.totalDebt)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Avg. LVR {((filteredSummary.totalDebt / filteredSummary.totalValue) * 100).toFixed(1)}%
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card className="bg-red-50 border-red-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-red-900 flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Goal Reached
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-900">{goal ? `FY${goal.goalYear}` : "Not Set"}</div>
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Goal Reached</CardTitle>
+                  <Target className="h-4 w-4 text-fintech-yield" />
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono text-2xl font-bold text-fintech-yield">{goal ? `FY${goal.goalYear}` : "Not Set"}</div>
+                  <p className="text-xs text-muted-foreground">Target year</p>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
         </div>
 
         {/* Chart Controls */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "equity" | "cashflow" | "debt")}>
-                  <TabsList>
-                    <TabsTrigger value="equity">Equity</TabsTrigger>
-                    <TabsTrigger value="cashflow">Cashflow</TabsTrigger>
-                    <TabsTrigger value="debt">Debt</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "equity" | "cashflow" | "debt")}>
+                    <TabsList>
+                      <TabsTrigger value="equity">Equity</TabsTrigger>
+                      <TabsTrigger value="cashflow">Cashflow</TabsTrigger>
+                      <TabsTrigger value="debt">Debt</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
 
-                <div className="flex gap-2">
-                  {[10, 20, 30, 50].map((years) => (
-                    <Button key={years} variant={selectedYears === years ? "default" : "outline"} size="sm" onClick={() => setSelectedYears(years)}>
-                      {years} Years
+                  <div className="flex gap-2">
+                    {[10, 20, 30, 50].map((years) => (
+                      <Button 
+                        key={years} 
+                        variant={selectedYears === years ? "default" : "outline"} 
+                        size="sm" 
+                        onClick={() => setSelectedYears(years)}
+                      >
+                        {years} Years
                     </Button>
                   ))}
                 </div>
@@ -270,10 +323,14 @@ export default function Dashboard() {
             
             {/* Expense Growth Override Control - Only show in cashflow view */}
             {viewMode === "cashflow" && (
-              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="mt-4 rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4"
+              >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <label className="text-sm font-medium text-amber-900 whitespace-nowrap">
+                    <label className="text-sm font-medium whitespace-nowrap">
                       Portfolio Expense Growth Rate:
                     </label>
                     <input
@@ -284,49 +341,81 @@ export default function Dashboard() {
                       value={expenseGrowthOverride ?? ""}
                       onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
                       placeholder="Use property rates"
-                      className="w-24 px-3 py-1.5 text-sm border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-24 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
                     />
-                    <span className="text-sm text-amber-700">% per year</span>
+                    <span className="text-sm text-muted-foreground">% per year</span>
                   </div>
                   {expenseGrowthOverride !== null && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setExpenseGrowthOverride(null)}
-                      className="text-amber-700 border-amber-300 hover:bg-amber-100"
                     >
                       Reset to Property Rates
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-amber-600 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   {expenseGrowthOverride === null
                     ? "Using individual property expense growth rates"
                     : `Overriding all properties with ${expenseGrowthOverride}% annual expense growth`}
                 </p>
-              </div>
+              </motion.div>
             )}
           </CardHeader>
           <CardContent>
             {chartData.length > 0 ? (
               <>
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800">
-                    👁️ VIEW DETAILED PROJECTIONS: Choose a future year to update the projections and insights below.
-                  </p>
-                </div>
-
                 <ResponsiveContainer width="100%" height={400}>
                   {viewMode === "equity" ? (
                     <AreaChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="year" />
-                      <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
-                      <Tooltip formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`} />
-                      <Legend />
-                      <Area type="monotone" dataKey="Portfolio Value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeDasharray="5 5" />
-                      <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.1} strokeDasharray="5 5" />
-                      <Area type="monotone" dataKey="Portfolio Equity" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                      <defs>
+                        <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-fintech-growth)" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="var(--color-fintech-growth)" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="debtGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-fintech-debt)" stopOpacity={0.6} />
+                          <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.05} />
+                        </linearGradient>
+                        <linearGradient id="valueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-fintech-yield)" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="var(--color-fintech-yield)" stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
+                      <XAxis 
+                        dataKey="year" 
+                        stroke="var(--color-muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--color-border)' }}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} 
+                        stroke="var(--color-muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--color-border)' }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`}
+                        contentStyle={{
+                          backgroundColor: 'var(--color-popover)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      />
+                      <Legend 
+                        wrapperStyle={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Area type="monotone" dataKey="Portfolio Value" stroke="var(--color-fintech-yield)" fill="url(#valueGradient)" strokeWidth={2} strokeDasharray="5 5" />
+                      <Area type="monotone" dataKey="Total Debt" stroke="var(--color-fintech-debt)" fill="url(#debtGradient)" strokeWidth={2} strokeDasharray="5 5" />
+                      <Area type="monotone" dataKey="Portfolio Equity" stroke="var(--color-fintech-growth)" fill="url(#growthGradient)" strokeWidth={3} />
                       {/* Purchase date markers */}
                       {filteredProperties?.map((property) => {
                         const purchaseYear = new Date(property.purchaseDate).getFullYear();
@@ -339,7 +428,7 @@ export default function Dashboard() {
                               x={chartYear}
                               y={dataPoint["Portfolio Equity"]}
                               r={8}
-                              fill="#f59e0b"
+                              fill="var(--color-fintech-debt)"
                               stroke="#ffffff"
                               strokeWidth={2}
                               label={{ value: "🏠", position: "top", fontSize: 16 }}
@@ -353,118 +442,193 @@ export default function Dashboard() {
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                          <stop offset="5%" stopColor="var(--color-fintech-growth)" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="var(--color-fintech-growth)" stopOpacity={0.1} />
                         </linearGradient>
                         <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
+                          <stop offset="5%" stopColor="var(--color-fintech-debt)" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.1} />
                         </linearGradient>
                         <linearGradient id="colorMortgage" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ec4899" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#ec4899" stopOpacity={0.1} />
+                          <stop offset="5%" stopColor="var(--color-fintech-yield)" stopOpacity={0.6} />
+                          <stop offset="95%" stopColor="var(--color-fintech-yield)" stopOpacity={0.1} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="year" />
-                      <YAxis tickFormatter={(value) => `$${(Math.abs(value) / 1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(value: number) => `$${(Math.abs(value) / 1000).toFixed(2)}k`} />
-                      <Legend />
-                      <Area type="monotone" dataKey="Rental Income" stroke="#10b981" fillOpacity={1} fill="url(#colorIncome)" stackId="1" />
-                      <Area type="monotone" dataKey="Expenses" stroke="#f59e0b" fillOpacity={1} fill="url(#colorExpenses)" stackId="2" />
-                      <Area type="monotone" dataKey="Loan Repayments" stroke="#ec4899" fillOpacity={1} fill="url(#colorMortgage)" stackId="2" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
+                      <XAxis 
+                        dataKey="year" 
+                        stroke="var(--color-muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--color-border)' }}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => `$${(Math.abs(value) / 1000).toFixed(0)}k`} 
+                        stroke="var(--color-muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--color-border)' }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => `$${(Math.abs(value) / 1000).toFixed(2)}k`}
+                        contentStyle={{
+                          backgroundColor: 'var(--color-popover)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      />
+                      <Legend 
+                        wrapperStyle={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Area type="monotone" dataKey="Rental Income" stroke="var(--color-fintech-growth)" fillOpacity={1} fill="url(#colorIncome)" stackId="1" />
+                      <Area type="monotone" dataKey="Expenses" stroke="var(--color-fintech-debt)" fillOpacity={1} fill="url(#colorExpenses)" stackId="2" />
+                      <Area type="monotone" dataKey="Loan Repayments" stroke="var(--color-fintech-yield)" fillOpacity={1} fill="url(#colorMortgage)" stackId="2" />
                     </AreaChart>
                   ) : (
                     <AreaChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="year" />
-                      <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
-                      <Tooltip formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`} />
-                      <Legend />
-                      <Area type="monotone" dataKey="Portfolio Value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeDasharray="5 5" />
-                      <Area type="monotone" dataKey="Total Debt" stroke="#ec4899" fill="#ec4899" fillOpacity={0.3} />
-                      <Area type="monotone" dataKey="Portfolio Equity" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
+                      <defs>
+                        <linearGradient id="debtViewGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-fintech-debt)" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
+                      <XAxis 
+                        dataKey="year" 
+                        stroke="var(--color-muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--color-border)' }}
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} 
+                        stroke="var(--color-muted-foreground)"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--color-border)' }}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`}
+                        contentStyle={{
+                          backgroundColor: 'var(--color-popover)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      />
+                      <Legend 
+                        wrapperStyle={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Area type="monotone" dataKey="Portfolio Value" stroke="var(--color-fintech-yield)" fill="url(#valueGradient)" strokeWidth={2} strokeDasharray="5 5" />
+                      <Area type="monotone" dataKey="Total Debt" stroke="var(--color-fintech-debt)" fill="url(#debtViewGradient)" strokeWidth={3} />
+                      <Area type="monotone" dataKey="Portfolio Equity" stroke="var(--color-fintech-growth)" fill="url(#growthGradient)" strokeWidth={2} fillOpacity={0.2} />
                     </AreaChart>
                   )}
                 </ResponsiveContainer>
               </>
             ) : (
-              <div className="h-96 flex items-center justify-center text-gray-500">
-                <div className="text-center">
-                  <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium mb-2">No properties yet</p>
-                  <p className="text-sm mb-4">Add your first property to see projections</p>
-                  <Link href="/properties/new">
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
+              <div className="flex h-96 items-center justify-center">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center"
+                >
+                  <Building2 className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
+                  <p className="mb-2 text-lg font-medium">No properties yet</p>
+                  <p className="mb-4 text-sm text-muted-foreground">Add your first property to see projections</p>
+                  <Link href="/properties/wizard">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
                       Add Property
                     </Button>
                   </Link>
-                </div>
+                </motion.div>
               </div>
             )}
           </CardContent>
         </Card>
+        </motion.div> {/* End Chart Controls */}
 
         {/* Properties List */}
         {properties && properties.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Your Properties</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {properties.map((property) => (
-                  <Link key={property.id} href={`/properties/${property.id}`}>
-                    <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <Building2 className="w-6 h-6 text-gray-500" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{property.nickname}</h3>
-                          <p className="text-sm text-gray-500">{property.address}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="flex gap-6">
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Value</p>
-                              <p className="font-semibold text-gray-900">{formatCurrency(property.currentValue)}</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Properties</CardTitle>
+                <CardDescription>Manage and track your property portfolio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {properties.map((property, index) => (
+                    <motion.div
+                      key={property.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.8 + index * 0.1 }}
+                    >
+                      <Link href={`/properties/${property.id}`}>
+                        <div className="group flex items-center justify-between rounded-lg border p-4 transition-colors hover:border-fintech-growth hover:bg-accent/50">
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fintech-growth/10">
+                              <Building2 className="h-6 w-6 text-fintech-growth" />
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500 mb-1">Debt</p>
-                              <p className="font-semibold text-red-600">{formatCurrency(property.totalDebt)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Equity</p>
-                              <p className="font-semibold text-green-600">{formatCurrency(property.equity)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Purchase Date</p>
-                              <p className="font-semibold text-gray-700">{new Date(property.purchaseDate).toLocaleDateString()}</p>
+                              <h3 className="font-semibold">{property.nickname}</h3>
+                              <p className="text-sm text-muted-foreground">{property.address}</p>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">{property.status}</p>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right">
+                              <div className="flex gap-6">
+                                <div>
+                                  <p className="mb-1 text-xs text-muted-foreground">Value</p>
+                                  <p className="font-mono font-semibold">{formatCurrency(property.currentValue)}</p>
+                                </div>
+                                <div>
+                                  <p className="mb-1 text-xs text-muted-foreground">Debt</p>
+                                  <p className="font-mono font-semibold text-fintech-debt">{formatCurrency(property.totalDebt)}</p>
+                                </div>
+                                <div>
+                                  <p className="mb-1 text-xs text-muted-foreground">Equity</p>
+                                  <p className="font-mono font-semibold text-fintech-growth">{formatCurrency(property.equity)}</p>
+                                </div>
+                                <div>
+                                  <p className="mb-1 text-xs text-muted-foreground">Purchase Date</p>
+                                  <p className="font-mono text-sm font-medium">{new Date(property.purchaseDate).toLocaleDateString()}</p>
+                                </div>
+                              </div>
+                              <p className="mt-1 text-xs text-muted-foreground">{property.status}</p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
+                              onClick={(e) => handleDeleteClick(e, property.id, property.nickname)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={(e) => handleDeleteClick(e, property.id, property.nickname)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
-      </div>
+      </div> {/* End container */}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
