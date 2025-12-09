@@ -16,14 +16,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceDot } from "recharts";
 import { useScenario } from "@/contexts/ScenarioContext";
 import { motion } from "framer-motion";
 import { BreathingChart, PropertyGrowthChart } from "@/components/charts";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
+  }
+
+  if (!user) {
+    setLocation("/");
+    return null;
+  }
   const { currentScenarioId } = useScenario();
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
@@ -32,7 +42,7 @@ export default function Dashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const utils = trpc.useUtils();
-  
+
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
       utils.properties.listWithFinancials.invalidate();
@@ -42,14 +52,14 @@ export default function Dashboard() {
       setPropertyToDelete(null);
     },
   });
-  
+
   const handleDeleteClick = (e: React.MouseEvent, propertyId: number, propertyName: string) => {
     e.preventDefault();
     e.stopPropagation();
     setPropertyToDelete({ id: propertyId, name: propertyName });
     setDeleteDialogOpen(true);
   };
-  
+
   const confirmDelete = () => {
     if (propertyToDelete) {
       deletePropertyMutation.mutate({ id: propertyToDelete.id });
@@ -65,7 +75,7 @@ export default function Dashboard() {
 
   const properties = dashboardData?.properties;
   const goal = dashboardData?.goal;
-  
+
   const { data: projections } = trpc.calculations.portfolioProjections.useQuery({
     startYear: currentYear,
     endYear: currentYear + selectedYears,
@@ -74,8 +84,8 @@ export default function Dashboard() {
   });
 
   // Filter properties and projections based on selection
-  const filteredProperties = selectedPropertyId === "all" 
-    ? properties 
+  const filteredProperties = selectedPropertyId === "all"
+    ? properties
     : properties?.filter(p => p.id === parseInt(selectedPropertyId));
 
   // Calculate filtered summary from filtered properties
@@ -103,44 +113,44 @@ export default function Dashboard() {
   // Prepare chart data - filter by selected property if applicable
   const chartData = selectedPropertyId === "all"
     ? projections?.map((p) => ({
+      year: `FY ${p.year.toString().slice(-2)}`,
+      fullYear: p.year,
+      "Portfolio Value": p.totalValue / 100,
+      "Total Debt": p.totalDebt / 100,
+      "Portfolio Equity": p.totalEquity / 100,
+      "Rental Income": p.totalRentalIncome / 100,
+      "Expenses": -(p.totalExpenses / 100), // Negative for visualization
+      "Loan Repayments": -(p.totalLoanRepayments / 100), // Negative for visualization
+      "Net Cashflow": p.totalCashflow / 100,
+    })) || []
+    : projections?.map((p) => {
+      // Filter projection data for selected property
+      const selectedProp = filteredProperties?.[0];
+      if (!selectedProp) return null;
+
+      // Find this property's data in the projection
+      const propertyData = p.properties.find(prop => prop.propertyId === selectedProp.id);
+      if (!propertyData) return null;
+
+      return {
         year: `FY ${p.year.toString().slice(-2)}`,
         fullYear: p.year,
-        "Portfolio Value": p.totalValue / 100,
-        "Total Debt": p.totalDebt / 100,
-        "Portfolio Equity": p.totalEquity / 100,
-        "Rental Income": p.totalRentalIncome / 100,
-        "Expenses": -(p.totalExpenses / 100), // Negative for visualization
-        "Loan Repayments": -(p.totalLoanRepayments / 100), // Negative for visualization
-        "Net Cashflow": p.totalCashflow / 100,
-      })) || []
-    : projections?.map((p) => {
-        // Filter projection data for selected property
-        const selectedProp = filteredProperties?.[0];
-        if (!selectedProp) return null;
-        
-        // Find this property's data in the projection
-        const propertyData = p.properties.find(prop => prop.propertyId === selectedProp.id);
-        if (!propertyData) return null;
-        
-        return {
-          year: `FY ${p.year.toString().slice(-2)}`,
-          fullYear: p.year,
-          "Portfolio Value": propertyData.value / 100,
-          "Total Debt": propertyData.debt / 100,
-          "Portfolio Equity": propertyData.equity / 100,
-          "Net Cashflow": propertyData.cashflow / 100,
-          // For single property, we need to get detailed cashflow from backend
-          // For now, approximate based on net cashflow
-          "Rental Income": Math.max(0, propertyData.cashflow / 100 * 3), // Rough estimate
-          "Expenses": Math.max(0, -propertyData.cashflow / 100 * 0.5), // Rough estimate
-          "Loan Repayments": Math.max(0, -propertyData.cashflow / 100 * 1.5), // Rough estimate
-        };
-      }).filter(Boolean) || [];
+        "Portfolio Value": propertyData.value / 100,
+        "Total Debt": propertyData.debt / 100,
+        "Portfolio Equity": propertyData.equity / 100,
+        "Net Cashflow": propertyData.cashflow / 100,
+        // For single property, we need to get detailed cashflow from backend
+        // For now, approximate based on net cashflow
+        "Rental Income": Math.max(0, propertyData.cashflow / 100 * 3), // Rough estimate
+        "Expenses": Math.max(0, -propertyData.cashflow / 100 * 0.5), // Rough estimate
+        "Loan Repayments": Math.max(0, -propertyData.cashflow / 100 * 1.5), // Rough estimate
+      };
+    }).filter(Boolean) || [];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <motion.header 
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="border-b bg-card px-6 py-4"
@@ -294,266 +304,266 @@ export default function Dashboard() {
 
                   <div className="flex gap-2">
                     {[10, 20, 30, 50].map((years) => (
-                      <Button 
-                        key={years} 
-                        variant={selectedYears === years ? "default" : "outline"} 
-                        size="sm" 
+                      <Button
+                        key={years}
+                        variant={selectedYears === years ? "default" : "outline"}
+                        size="sm"
                         onClick={() => setSelectedYears(years)}
                       >
                         {years} Years
-                    </Button>
-                  ))}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
+
+                <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="All Properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Properties</SelectItem>
+                    {properties?.map((p) => (
+                      <SelectItem key={p.id} value={p.id.toString()}>
+                        {p.nickname}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Properties" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
-                  {properties?.map((p) => (
-                    <SelectItem key={p.id} value={p.id.toString()}>
-                      {p.nickname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Expense Growth Override Control - Only show in cashflow view */}
-            {viewMode === "cashflow" && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="mt-4 rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <label className="text-sm font-medium whitespace-nowrap">
-                      Portfolio Expense Growth Rate:
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      step="0.5"
-                      value={expenseGrowthOverride ?? ""}
-                      onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
-                      placeholder="Use property rates"
-                      className="w-24 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
-                    />
-                    <span className="text-sm text-muted-foreground">% per year</span>
-                  </div>
-                  {expenseGrowthOverride !== null && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setExpenseGrowthOverride(null)}
-                    >
-                      Reset to Property Rates
-                    </Button>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {expenseGrowthOverride === null
-                    ? "Using individual property expense growth rates"
-                    : `Overriding all properties with ${expenseGrowthOverride}% annual expense growth`}
-                </p>
-              </motion.div>
-            )}
-          </CardHeader>
-          <CardContent>
-            {chartData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={400}>
-                  {viewMode === "equity" ? (
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-fintech-growth)" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="var(--color-fintech-growth)" stopOpacity={0.1} />
-                        </linearGradient>
-                        <linearGradient id="debtGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-fintech-debt)" stopOpacity={0.6} />
-                          <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.05} />
-                        </linearGradient>
-                        <linearGradient id="valueGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-fintech-yield)" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="var(--color-fintech-yield)" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
-                      <XAxis 
-                        dataKey="year" 
-                        stroke="var(--color-muted-foreground)"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: 'var(--color-border)' }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} 
-                        stroke="var(--color-muted-foreground)"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: 'var(--color-border)' }}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`}
-                        contentStyle={{
-                          backgroundColor: 'var(--color-popover)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          fontFamily: 'var(--font-mono)',
-                        }}
-                      />
-                      <Legend 
-                        wrapperStyle={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Area type="monotone" dataKey="Portfolio Value" stroke="var(--color-fintech-yield)" fill="url(#valueGradient)" strokeWidth={2} strokeDasharray="5 5" />
-                      <Area type="monotone" dataKey="Total Debt" stroke="var(--color-fintech-debt)" fill="url(#debtGradient)" strokeWidth={2} strokeDasharray="5 5" />
-                      <Area type="monotone" dataKey="Portfolio Equity" stroke="var(--color-fintech-growth)" fill="url(#growthGradient)" strokeWidth={3} />
-                      {/* Purchase date markers */}
-                      {filteredProperties?.map((property) => {
-                        const purchaseYear = new Date(property.purchaseDate).getFullYear();
-                        const chartYear = `FY ${purchaseYear.toString().slice(-2)}`;
-                        const dataPoint = chartData.find(d => d.year === chartYear);
-                        if (dataPoint) {
-                          return (
-                            <ReferenceDot
-                              key={property.id}
-                              x={chartYear}
-                              y={dataPoint["Portfolio Equity"]}
-                              r={8}
-                              fill="var(--color-fintech-debt)"
-                              stroke="#ffffff"
-                              strokeWidth={2}
-                              label={{ value: "🏠", position: "top", fontSize: 16 }}
-                            />
-                          );
-                        }
-                        return null;
-                      })}
-                    </AreaChart>
-                  ) : viewMode === "cashflow" ? (
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--color-fintech-growth)" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="var(--color-fintech-growth)" stopOpacity={0.1} />
-                        </linearGradient>
-                        <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--color-fintech-debt)" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.1} />
-                        </linearGradient>
-                        <linearGradient id="colorMortgage" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="var(--color-fintech-yield)" stopOpacity={0.6} />
-                          <stop offset="95%" stopColor="var(--color-fintech-yield)" stopOpacity={0.1} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
-                      <XAxis 
-                        dataKey="year" 
-                        stroke="var(--color-muted-foreground)"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: 'var(--color-border)' }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => `$${(Math.abs(value) / 1000).toFixed(0)}k`} 
-                        stroke="var(--color-muted-foreground)"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: 'var(--color-border)' }}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => `$${(Math.abs(value) / 1000).toFixed(2)}k`}
-                        contentStyle={{
-                          backgroundColor: 'var(--color-popover)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          fontFamily: 'var(--font-mono)',
-                        }}
-                      />
-                      <Legend 
-                        wrapperStyle={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Area type="monotone" dataKey="Rental Income" stroke="var(--color-fintech-growth)" fillOpacity={1} fill="url(#colorIncome)" stackId="1" />
-                      <Area type="monotone" dataKey="Expenses" stroke="var(--color-fintech-debt)" fillOpacity={1} fill="url(#colorExpenses)" stackId="2" />
-                      <Area type="monotone" dataKey="Loan Repayments" stroke="var(--color-fintech-yield)" fillOpacity={1} fill="url(#colorMortgage)" stackId="2" />
-                    </AreaChart>
-                  ) : (
-                    <AreaChart data={chartData}>
-                      <defs>
-                        <linearGradient id="debtViewGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--color-fintech-debt)" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.1} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
-                      <XAxis 
-                        dataKey="year" 
-                        stroke="var(--color-muted-foreground)"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: 'var(--color-border)' }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} 
-                        stroke="var(--color-muted-foreground)"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={{ stroke: 'var(--color-border)' }}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`}
-                        contentStyle={{
-                          backgroundColor: 'var(--color-popover)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: '8px',
-                          fontFamily: 'var(--font-mono)',
-                        }}
-                      />
-                      <Legend 
-                        wrapperStyle={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: '12px',
-                        }}
-                      />
-                      <Area type="monotone" dataKey="Portfolio Value" stroke="var(--color-fintech-yield)" fill="url(#valueGradient)" strokeWidth={2} strokeDasharray="5 5" />
-                      <Area type="monotone" dataKey="Total Debt" stroke="var(--color-fintech-debt)" fill="url(#debtViewGradient)" strokeWidth={3} />
-                      <Area type="monotone" dataKey="Portfolio Equity" stroke="var(--color-fintech-growth)" fill="url(#growthGradient)" strokeWidth={2} fillOpacity={0.2} />
-                    </AreaChart>
-                  )}
-                </ResponsiveContainer>
-              </>
-            ) : (
-              <div className="flex h-96 items-center justify-center">
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center"
+              {/* Expense Growth Override Control - Only show in cashflow view */}
+              {viewMode === "cashflow" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="mt-4 rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4"
                 >
-                  <Building2 className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
-                  <p className="mb-2 text-lg font-medium">No properties yet</p>
-                  <p className="mb-4 text-sm text-muted-foreground">Add your first property to see projections</p>
-                  <Link href="/properties/wizard">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Property
-                    </Button>
-                  </Link>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <label className="text-sm font-medium whitespace-nowrap">
+                        Portfolio Expense Growth Rate:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        step="0.5"
+                        value={expenseGrowthOverride ?? ""}
+                        onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
+                        placeholder="Use property rates"
+                        className="w-24 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
+                      />
+                      <span className="text-sm text-muted-foreground">% per year</span>
+                    </div>
+                    {expenseGrowthOverride !== null && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setExpenseGrowthOverride(null)}
+                      >
+                        Reset to Property Rates
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {expenseGrowthOverride === null
+                      ? "Using individual property expense growth rates"
+                      : `Overriding all properties with ${expenseGrowthOverride}% annual expense growth`}
+                  </p>
                 </motion.div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardHeader>
+            <CardContent>
+              {chartData.length > 0 ? (
+                <>
+                  <ResponsiveContainer width="100%" height={400}>
+                    {viewMode === "equity" ? (
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--color-fintech-growth)" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="var(--color-fintech-growth)" stopOpacity={0.1} />
+                          </linearGradient>
+                          <linearGradient id="debtGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--color-fintech-debt)" stopOpacity={0.6} />
+                            <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.05} />
+                          </linearGradient>
+                          <linearGradient id="valueGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--color-fintech-yield)" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="var(--color-fintech-yield)" stopOpacity={0.05} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
+                        <XAxis
+                          dataKey="year"
+                          stroke="var(--color-muted-foreground)"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border)' }}
+                        />
+                        <YAxis
+                          tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`}
+                          stroke="var(--color-muted-foreground)"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border)' }}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`}
+                          contentStyle={{
+                            backgroundColor: 'var(--color-popover)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '8px',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        />
+                        <Legend
+                          wrapperStyle={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <Area type="monotone" dataKey="Portfolio Value" stroke="var(--color-fintech-yield)" fill="url(#valueGradient)" strokeWidth={2} strokeDasharray="5 5" />
+                        <Area type="monotone" dataKey="Total Debt" stroke="var(--color-fintech-debt)" fill="url(#debtGradient)" strokeWidth={2} strokeDasharray="5 5" />
+                        <Area type="monotone" dataKey="Portfolio Equity" stroke="var(--color-fintech-growth)" fill="url(#growthGradient)" strokeWidth={3} />
+                        {/* Purchase date markers */}
+                        {filteredProperties?.map((property) => {
+                          const purchaseYear = new Date(property.purchaseDate).getFullYear();
+                          const chartYear = `FY ${purchaseYear.toString().slice(-2)}`;
+                          const dataPoint = chartData.find(d => d.year === chartYear);
+                          if (dataPoint) {
+                            return (
+                              <ReferenceDot
+                                key={property.id}
+                                x={chartYear}
+                                y={dataPoint["Portfolio Equity"]}
+                                r={8}
+                                fill="var(--color-fintech-debt)"
+                                stroke="#ffffff"
+                                strokeWidth={2}
+                                label={{ value: "🏠", position: "top", fontSize: 16 }}
+                              />
+                            );
+                          }
+                          return null;
+                        })}
+                      </AreaChart>
+                    ) : viewMode === "cashflow" ? (
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-fintech-growth)" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="var(--color-fintech-growth)" stopOpacity={0.1} />
+                          </linearGradient>
+                          <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-fintech-debt)" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.1} />
+                          </linearGradient>
+                          <linearGradient id="colorMortgage" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-fintech-yield)" stopOpacity={0.6} />
+                            <stop offset="95%" stopColor="var(--color-fintech-yield)" stopOpacity={0.1} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
+                        <XAxis
+                          dataKey="year"
+                          stroke="var(--color-muted-foreground)"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border)' }}
+                        />
+                        <YAxis
+                          tickFormatter={(value) => `$${(Math.abs(value) / 1000).toFixed(0)}k`}
+                          stroke="var(--color-muted-foreground)"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border)' }}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => `$${(Math.abs(value) / 1000).toFixed(2)}k`}
+                          contentStyle={{
+                            backgroundColor: 'var(--color-popover)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '8px',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        />
+                        <Legend
+                          wrapperStyle={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <Area type="monotone" dataKey="Rental Income" stroke="var(--color-fintech-growth)" fillOpacity={1} fill="url(#colorIncome)" stackId="1" />
+                        <Area type="monotone" dataKey="Expenses" stroke="var(--color-fintech-debt)" fillOpacity={1} fill="url(#colorExpenses)" stackId="2" />
+                        <Area type="monotone" dataKey="Loan Repayments" stroke="var(--color-fintech-yield)" fillOpacity={1} fill="url(#colorMortgage)" stackId="2" />
+                      </AreaChart>
+                    ) : (
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="debtViewGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--color-fintech-debt)" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="var(--color-fintech-debt)" stopOpacity={0.1} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
+                        <XAxis
+                          dataKey="year"
+                          stroke="var(--color-muted-foreground)"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border)' }}
+                        />
+                        <YAxis
+                          tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`}
+                          stroke="var(--color-muted-foreground)"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={{ stroke: 'var(--color-border)' }}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => `$${(value / 1000000).toFixed(2)}M`}
+                          contentStyle={{
+                            backgroundColor: 'var(--color-popover)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: '8px',
+                            fontFamily: 'var(--font-mono)',
+                          }}
+                        />
+                        <Legend
+                          wrapperStyle={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '12px',
+                          }}
+                        />
+                        <Area type="monotone" dataKey="Portfolio Value" stroke="var(--color-fintech-yield)" fill="url(#valueGradient)" strokeWidth={2} strokeDasharray="5 5" />
+                        <Area type="monotone" dataKey="Total Debt" stroke="var(--color-fintech-debt)" fill="url(#debtViewGradient)" strokeWidth={3} />
+                        <Area type="monotone" dataKey="Portfolio Equity" stroke="var(--color-fintech-growth)" fill="url(#growthGradient)" strokeWidth={2} fillOpacity={0.2} />
+                      </AreaChart>
+                    )}
+                  </ResponsiveContainer>
+                </>
+              ) : (
+                <div className="flex h-96 items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center"
+                  >
+                    <Building2 className="mx-auto mb-4 h-16 w-16 text-muted-foreground/50" />
+                    <p className="mb-2 text-lg font-medium">No properties yet</p>
+                    <p className="mb-4 text-sm text-muted-foreground">Add your first property to see projections</p>
+                    <Link href="/properties/wizard">
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Property
+                      </Button>
+                    </Link>
+                  </motion.div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </motion.div> {/* End Chart Controls */}
 
         {/* Properties List */}
