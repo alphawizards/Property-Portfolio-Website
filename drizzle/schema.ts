@@ -186,7 +186,7 @@ export const expenseLogs = mysqlTable("expense_logs", {
   propertyId: int("propertyId").notNull(),
   date: datetime("date").notNull(),
   totalAmount: int("totalAmount").notNull(), // in cents
-  frequency: mysqlEnum("frequency", ["Monthly", "Annual", "OneTime"]).notNull(),
+  frequency: mysqlEnum("frequency", ["Monthly", "Annual", "OneTime", "Weekly", "Quarterly", "Annually"]).notNull(),
   growthRate: int("growthRate").default(0).notNull(), // in basis points
 });
 
