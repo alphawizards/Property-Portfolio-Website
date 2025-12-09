@@ -1,6 +1,6 @@
 import { eq, and, desc, asc, isNull } from "drizzle-orm";
-import { Client } from "@planetscale/database";
-import { drizzle } from "drizzle-orm/planetscale-serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "../drizzle/schema";
 import * as relations from "../drizzle/relations";
 import {
@@ -47,7 +47,7 @@ let _db: ReturnType<typeof drizzle<typeof schema & typeof relations>> | null = n
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const client = new Client({ url: process.env.DATABASE_URL });
+      const client = postgres(process.env.DATABASE_URL);
       _db = drizzle(client, { schema: { ...schema, ...relations } });
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
