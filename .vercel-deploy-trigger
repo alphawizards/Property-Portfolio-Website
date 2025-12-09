@@ -1,0 +1,14 @@
+# Vercel Deployment Trigger
+# This file forces a fresh deployment
+
+Deployment triggered at: 2025-12-09 08:30 UTC
+Latest commit: 4212039
+Branch: genspark_ai_developer
+
+All fixes applied:
+- Toast import fixed (sonner)
+- Build script fixed (vite only)
+- Vercel config updated
+- .vercelignore added
+
+This deployment should work!

@@ -15,6 +15,8 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ScenarioProvider } from "./contexts/ScenarioContext";
 import { NarrativeLoader } from "./components/ui/NarrativeLoader";
+import { Footer } from "./components/Footer";
+import { FeedbackWidget } from "./components/FeedbackWidget";
 
 // Lazy load Premium features
 const PremiumDashboard = lazy(() => import("@/pages/PremiumDashboard").then(m => ({ default: m.PremiumDashboard })));
@@ -59,6 +61,8 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <Footer />
+            <FeedbackWidget />
           </TooltipProvider>
         </ScenarioProvider>
       </ThemeProvider>
