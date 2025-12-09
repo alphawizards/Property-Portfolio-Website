@@ -10,6 +10,8 @@ import Comparison from "@/pages/Comparison";
 import Subscription from "@/pages/Subscription";
 import PropertyAnalysis from "@/pages/PropertyAnalysis";
 import AdminDashboard from "@/pages/AdminDashboard";
+import LandingPage from "@/pages/LandingPage";
+import DemoDashboard from "@/pages/DemoDashboard";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -23,12 +25,14 @@ const PropertyWizard = lazy(() => import("@/pages/PropertyWizard").then(m => ({ 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={LandingPage} />
+      <Route path="/demo" component={DemoDashboard} />
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/properties" component={Properties} />
       <Route path="/properties/new" component={AddPropertyExtended} />
       <Route path="/properties/wizard">
         {() => (
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader /></div>}>
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
             <PropertyWizard />
           </Suspense>
         )}
@@ -39,7 +43,7 @@ function Router() {
       <Route path="/subscription" component={Subscription} />
       <Route path="/dashboard/premium">
         {() => (
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader /></div>}>
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
             <PremiumDashboard />
           </Suspense>
         )}
