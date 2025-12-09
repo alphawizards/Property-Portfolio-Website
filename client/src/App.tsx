@@ -19,6 +19,7 @@ import { Footer } from "./components/Footer";
 import { FeedbackWidget } from "./components/FeedbackWidget";
 
 import LandingPage from "@/pages/LandingPage";
+import DemoDashboard from "@/pages/DemoDashboard";
 
 // Lazy load Premium features
 const PremiumDashboard = lazy(() => import("@/pages/PremiumDashboard").then(m => ({ default: m.PremiumDashboard })));
@@ -37,6 +38,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/demo" component={DemoDashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/properties" component={Properties} />
       <Route path="/properties/new" component={AddPropertyExtended} />
