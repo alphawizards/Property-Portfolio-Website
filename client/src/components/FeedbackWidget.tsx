@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { useToast } from "../hooks/use-toast";
+import { toast } from "sonner";
 
 type FeedbackCategory = "Bug" | "Feature Request" | "General" | "Complaint" | "Praise" | "Other";
 
@@ -37,26 +37,21 @@ export function FeedbackWidget() {
   const [message, setMessage] = useState("");
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
 
-  const { toast } = useToast();
   const submitFeedback = trpc.feedback.submit.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (title.length < 3) {
-      toast({
-        title: "Title too short",
+      toast.error("Title too short", {
         description: "Please provide a title with at least 3 characters",
-        variant: "destructive",
       });
       return;
     }
 
     if (message.length < 10) {
-      toast({
-        title: "Message too short",
+      toast.error("Message too short", {
         description: "Please provide more details (at least 10 characters)",
-        variant: "destructive",
       });
       return;
     }
@@ -79,8 +74,7 @@ export function FeedbackWidget() {
         metadata,
       });
 
-      toast({
-        title: "Feedback submitted!",
+      toast.success("Feedback submitted!", {
         description: "Thank you for helping us improve. We'll review your feedback shortly.",
       });
 
@@ -91,10 +85,8 @@ export function FeedbackWidget() {
       setMessage("");
       setIsOpen(false);
     } catch (error) {
-      toast({
-        title: "Error submitting feedback",
+      toast.error("Error submitting feedback", {
         description: "Please try again later",
-        variant: "destructive",
       });
     }
   };
