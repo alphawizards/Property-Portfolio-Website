@@ -5,11 +5,12 @@ import { ArrowRight, TrendingUp, DollarSign, Building2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export default function Comparison() {
-  const { currentScenarioId, scenarios } = useScenario();
-  
+  const { currentScenarioId } = useScenario();
+  const { data: scenarios } = trpc.scenarios.list.useQuery();
+
   // Fetch Live Data (scenarioId = null)
   const { data: liveData, isLoading: isLiveLoading } = trpc.portfolios.getDashboard.useQuery({
-    scenarioId: null,
+    scenarioId: undefined,
   });
 
   // Fetch Scenario Data (only if scenario selected)
@@ -36,18 +37,18 @@ export default function Comparison() {
   const comparisonData = [
     {
       name: "Total Value",
-      Live: parseFloat(liveData?.totalValue.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalValue.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: liveData?.totalValue || 0,
+      Scenario: scenarioData?.totalValue || 0,
     },
     {
       name: "Total Debt",
-      Live: parseFloat(liveData?.totalDebt.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalDebt.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: liveData?.totalDebt || 0,
+      Scenario: scenarioData?.totalDebt || 0,
     },
     {
       name: "Net Equity",
-      Live: parseFloat(liveData?.totalEquity.replace(/[^0-9.-]+/g, "") || "0"),
-      Scenario: parseFloat(scenarioData?.totalEquity.replace(/[^0-9.-]+/g, "") || "0"),
+      Live: liveData?.totalEquity || 0,
+      Scenario: scenarioData?.totalEquity || 0,
     },
   ];
 
@@ -64,23 +65,23 @@ export default function Comparison() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Comparison Cards */}
-        <ComparisonCard 
-          title="Total Value" 
-          live={liveData?.totalValue || "$0"} 
-          scenario={scenarioData?.totalValue || "$0"} 
+        <ComparisonCard
+          title="Total Value"
+          live={liveData?.totalValue || "$0"}
+          scenario={scenarioData?.totalValue || "$0"}
           icon={DollarSign}
         />
-        <ComparisonCard 
-          title="Total Debt" 
-          live={liveData?.totalDebt || "$0"} 
-          scenario={scenarioData?.totalDebt || "$0"} 
+        <ComparisonCard
+          title="Total Debt"
+          live={liveData?.totalDebt || "$0"}
+          scenario={scenarioData?.totalDebt || "$0"}
           icon={TrendingUp}
           inverse // Lower debt is better usually, but context depends.
         />
-        <ComparisonCard 
-          title="Net Equity" 
-          live={liveData?.totalEquity || "$0"} 
-          scenario={scenarioData?.totalEquity || "$0"} 
+        <ComparisonCard
+          title="Net Equity"
+          live={liveData?.totalEquity || "$0"}
+          scenario={scenarioData?.totalEquity || "$0"}
           icon={Building2}
         />
       </div>
@@ -114,10 +115,10 @@ function ComparisonCard({ title, live, scenario, icon: Icon, inverse = false }: 
   const scenarioVal = parseFloat(scenario.replace(/[^0-9.-]+/g, ""));
   const diff = scenarioVal - liveVal;
   const percent = liveVal !== 0 ? (diff / liveVal) * 100 : 0;
-  
+
   const isPositive = diff > 0;
   const isGood = inverse ? !isPositive : isPositive;
-  
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

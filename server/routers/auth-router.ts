@@ -4,6 +4,7 @@ import { sdk } from "../_core/sdk";
 import * as db from "../db";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
+import { sendWelcomeEmail } from "../_core/email";
 
 export const authRouter = router({
     devLogin: publicProcedure
@@ -78,4 +79,63 @@ export const authRouter = router({
 
             return { success: true, user };
         }),
+
+    handleOAuthCallback: publicProcedure
+        .input(z.object({
+            code: z.string(),
+            state: z.string(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+            const { code, state } = input;
+
+            // Exchange code for token
+            const tokenResponse = await sdk.exchangeCodeForToken(code, state);
+            const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
+
+            if (!userInfo.openId) {
+                throw new Error("openId missing from user info");
+            }
+
+            // Check if new user
+            const existingUser = await db.getUserByOpenId(userInfo.openId);
+            const isNewUser = !existingUser;
+
+            // Upsert User
+            await db.upsertUser({
+                openId: userInfo.openId,
+                name: userInfo.name || null,
+                email: userInfo.email ?? null,
+                loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+                lastSignedIn: new Date(),
+            });
+
+            // Send welcome email
+            if (isNewUser && userInfo.email) {
+                try {
+                    await sendWelcomeEmail(userInfo.name || 'there', userInfo.email);
+                } catch (emailError) {
+                    console.error('[OAuth] Failed to send welcome email:', emailError);
+                }
+            }
+
+            // Create Session Token
+            const sessionToken = await sdk.createSessionToken(userInfo.openId, {
+                name: userInfo.name || "",
+                expiresInMs: ONE_YEAR_MS,
+            });
+
+            // Return token so the caller (API route) can set the cookie
+            return { success: true, token: sessionToken };
+        }),
+
+    me: publicProcedure.query(async ({ ctx }) => {
+        return ctx.user || null;
+    }),
+
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+        if (ctx.res) {
+            ctx.res.clearCookie(COOKIE_NAME);
+        }
+        return { success: true };
+    }),
 });

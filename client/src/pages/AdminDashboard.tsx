@@ -241,7 +241,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {usersData?.users.map((u) => (
+                  {usersData?.users.map((u: any) => (
                     <TableRow key={u.id}>
                       <TableCell className="font-medium">
                         {u.name || "Unknown"}

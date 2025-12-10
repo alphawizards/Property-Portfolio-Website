@@ -4,10 +4,17 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceDot } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Target, Plus, PieChart, Building2, TrendingUp, ArrowUpRight, Calculator, Trash2, DollarSign } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useScenario } from "@/contexts/ScenarioContext";
+import { formatCurrency } from "@/lib/utils";
+import { ProjectionsTable } from "@/components/projections-table";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -446,7 +453,7 @@ export default function Dashboard() {
                         {filteredProperties?.map((property) => {
                           const purchaseYear = new Date(property.purchaseDate).getFullYear();
                           const chartYear = `FY ${purchaseYear.toString().slice(-2)}`;
-                          const dataPoint = chartData.find(d => d.year === chartYear);
+                          const dataPoint = chartData.find(d => d?.year === chartYear);
                           if (dataPoint) {
                             return (
                               <ReferenceDot

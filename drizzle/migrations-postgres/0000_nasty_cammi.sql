@@ -1,1 +1,0 @@
--- 0000 migration skipped as objects exist

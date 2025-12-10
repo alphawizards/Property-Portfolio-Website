@@ -5,7 +5,7 @@
  * Works with existing schema (users table with subscriptionTier enum).
  */
 
-import { users, properties } from "../drizzle/schema-postgres";
+import { users, properties } from "../drizzle/schema";
 import { eq, and, count } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

@@ -8,20 +8,14 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as featureGates from "../feature-gates";
-import { getDb } from "../db";
+import { db } from "../db";
 
 export const featureGatesRouter = router({
   /**
    * Check if user can add a new property
    */
   canAddProperty: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.canAddProperty(db, ctx.user.id);
   }),
 
@@ -29,13 +23,7 @@ export const featureGatesRouter = router({
    * Get property count for current user
    */
   getPropertyCount: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.getPropertyCount(db, ctx.user.id);
   }),
 
@@ -45,13 +33,7 @@ export const featureGatesRouter = router({
   canViewForecast: protectedProcedure
     .input(z.object({ years: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection failed",
-        });
-      }
+      // const db = await getDb();
       return await featureGates.canViewForecast(db, ctx.user.id, input.years);
     }),
 
@@ -59,13 +41,7 @@ export const featureGatesRouter = router({
    * Check tax calculator access
    */
   canUseTaxCalculator: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.canUseTaxCalculator(db, ctx.user.id);
   }),
 
@@ -73,13 +49,7 @@ export const featureGatesRouter = router({
    * Check investment comparison access
    */
   canUseInvestmentComparison: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.canUseInvestmentComparison(db, ctx.user.id);
   }),
 
@@ -87,13 +57,7 @@ export const featureGatesRouter = router({
    * Check report export access
    */
   canExportReports: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.canExportReports(db, ctx.user.id);
   }),
 
@@ -101,13 +65,7 @@ export const featureGatesRouter = router({
    * Check advanced analytics access
    */
   canUseAdvancedAnalytics: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.canUseAdvancedAnalytics(db, ctx.user.id);
   }),
 
@@ -115,13 +73,7 @@ export const featureGatesRouter = router({
    * Get all feature access at once (reduces round trips)
    */
   getAllFeatureAccess: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
     return await featureGates.getAllFeatureAccess(db, ctx.user.id);
   }),
 });

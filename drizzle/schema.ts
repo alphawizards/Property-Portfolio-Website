@@ -302,7 +302,7 @@ export const loanScenarios = mysqlTable("loan_scenarios", {
   userId: int("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  
+
   // Loan parameters
   propertyValue: int("propertyValue").notNull(), // in cents
   deposit: int("deposit").notNull(), // in cents
@@ -311,20 +311,20 @@ export const loanScenarios = mysqlTable("loan_scenarios", {
   loanTerm: int("loanTerm").notNull(), // in months
   repaymentFrequency: varchar("repaymentFrequency", { length: 50 }).notNull(),
   interestOption: varchar("interestOption", { length: 50 }).notNull(),
-  
+
   // Extra payments
   offsetBalance: int("offsetBalance").default(0), // in cents
   extraRepaymentAmount: int("extraRepaymentAmount").default(0), // in cents
   extraRepaymentFrequency: varchar("extraRepaymentFrequency", { length: 50 }),
-  
+
   // Property growth
   propertyGrowthRate: int("propertyGrowthRate").notNull(), // in basis points
-  
+
   // Calculated results
   totalInterest: int("totalInterest"), // in cents
   totalPayments: int("totalPayments"), // in cents
   futurePropertyValue: int("futurePropertyValue"), // in cents
-  
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -363,3 +363,28 @@ export const scenarios = mysqlTable("scenarios", {
 
 export type Scenario = typeof scenarios.$inferSelect;
 export type InsertScenario = typeof scenarios.$inferInsert;
+
+/**
+ * Feedback - stores user feedback
+ */
+export const feedback = mysqlTable("feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  userEmail: varchar("userEmail", { length: 320 }),
+  userName: varchar("userName", { length: 255 }),
+  category: mysqlEnum("category", ["Bug", "Feature Request", "General", "Complaint", "Praise", "Other"]).notNull(),
+  rating: int("rating"),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["New", "In Progress", "Resolved", "Closed"]).default("New").notNull(),
+  source: varchar("source", { length: 50 }).notNull(),
+  adminNotes: text("adminNotes"),
+  resolvedAt: datetime("resolvedAt"),
+  resolvedBy: int("resolvedBy"),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = typeof feedback.$inferInsert;

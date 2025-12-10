@@ -46,7 +46,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AdminDashboard() {
-    const { user, isLoading: authLoading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [page, setPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                                         </TableRow>
                                     ))
                                 ) : (
-                                    usersData?.users.map((u) => (
+                                    usersData?.users.map((u: any) => (
                                         <TableRow key={u.id}>
                                             <TableCell>
                                                 <div className="flex flex-col">

@@ -690,7 +690,7 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number().int(),
-          breakdown: z.array(expenseBreakdownSchema),
+          breakdown: z.array(expenseBreakdownSchema).optional(),
           growthRate: z.number().optional(), // in basis points (e.g., 300 = 3%)
         })
       )
@@ -703,21 +703,29 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        // Calculate total amount from breakdown
-        const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
 
-        // Update expense log with new total amount and growth rate
-        const updates: { totalAmount: number; growthRate?: number } = { totalAmount };
+        const updates: { totalAmount?: number; growthRate?: number } = {};
         if (input.growthRate !== undefined) {
           updates.growthRate = input.growthRate;
         }
-        await db.updateExpenseLog(input.id, updates);
 
-        // Delete existing breakdown items
-        await db.deleteExpenseBreakdownByLogId(input.id);
-        // Add new breakdown items
-        for (const item of input.breakdown) {
-          await db.addExpenseBreakdown({ ...item, expenseLogId: input.id });
+        if (input.breakdown) {
+          // Calculate total amount from breakdown
+          const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
+          updates.totalAmount = totalAmount;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await db.updateExpenseLog(input.id, updates);
+        }
+
+        if (input.breakdown) {
+          // Delete existing breakdown items
+          await db.deleteExpenseBreakdownByLogId(input.id);
+          // Add new breakdown items
+          for (const item of input.breakdown) {
+            await db.addExpenseBreakdown({ ...item, expenseLogId: input.id });
+          }
         }
         return { success: true };
       }),

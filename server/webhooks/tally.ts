@@ -4,8 +4,8 @@
  */
 
 import { Router } from "express";
-import { getDb } from "../db";
-import { feedback } from "../../drizzle/schema-postgres";
+import { db } from "../db";
+import { feedback } from "../../drizzle/schema";
 
 export const tallyWebhookRouter = Router();
 
@@ -115,11 +115,12 @@ tallyWebhookRouter.post("/tally", async (req, res) => {
     });
 
     // Insert into database
-    const db = await getDb();
-    if (!db) {
-      console.error("❌ Database connection failed");
-      return res.status(500).json({ error: "Database connection failed" });
-    }
+    // Insert into database
+    // const db = await getDb();
+    // if (!db) {
+    //   console.error("❌ Database connection failed");
+    //   return res.status(500).json({ error: "Database connection failed" });
+    // }
     const result = await db
       .insert(feedback)
       .values({
@@ -135,10 +136,9 @@ tallyWebhookRouter.post("/tally", async (req, res) => {
         metadata: metadata,
         createdAt: new Date(),
         updatedAt: new Date(),
-      })
-      .returning({ id: feedback.id });
+      });
 
-    const feedbackId = result[0]?.id;
+    const feedbackId = Number(result.insertId);
 
     console.log(`✅ Feedback saved successfully! ID: ${feedbackId}`);
     console.log(`   Category: ${category}`);

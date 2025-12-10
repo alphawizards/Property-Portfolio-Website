@@ -6,8 +6,8 @@
 import { router, protectedProcedure, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { getDb } from "../db";
-import { feedback, users } from "../../drizzle/schema-postgres";
+import { db } from "../db";
+import { feedback, users } from "../../drizzle/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
 
 // Admin-only middleware
@@ -36,13 +36,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection failed",
-        });
-      }
+      // const db = await getDb();
 
       const result = await db
         .insert(feedback)
@@ -59,12 +53,10 @@ export const feedbackRouter = router({
           metadata: input.metadata,
           createdAt: new Date(),
           updatedAt: new Date(),
-        })
-        .returning({ id: feedback.id });
-
+        });
       return {
         success: true,
-        feedbackId: result[0]?.id,
+        feedbackId: Number(result.insertId),
         message: "Thank you for your feedback! We'll review it shortly.",
       };
     }),
@@ -85,13 +77,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection failed",
-        });
-      }
+      // const db = await getDb();
 
       const result = await db
         .insert(feedback)
@@ -107,12 +93,11 @@ export const feedbackRouter = router({
           status: "New",
           createdAt: new Date(),
           updatedAt: new Date(),
-        })
-        .returning({ id: feedback.id });
+        });
 
       return {
         success: true,
-        feedbackId: result[0]?.id,
+        feedbackId: Number(result.insertId),
         message: "Thank you for your feedback!",
       };
     }),
@@ -121,13 +106,7 @@ export const feedbackRouter = router({
    * Get user's own feedback
    */
   getMyFeedback: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
 
     const userFeedback = await db
       .select({
@@ -162,13 +141,7 @@ export const feedbackRouter = router({
       })
     )
     .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection failed",
-        });
-      }
+      // const db = await getDb();
       const { status, category, page, pageSize } = input;
       const offset = (page - 1) * pageSize;
 
@@ -236,13 +209,7 @@ export const feedbackRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection failed",
-        });
-      }
+      // const db = await getDb();
 
       const updateData: any = {
         status: input.status,
@@ -267,13 +234,7 @@ export const feedbackRouter = router({
    * Get feedback statistics (admin only)
    */
   getStats: adminProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Database connection failed",
-      });
-    }
+    // const db = await getDb();
 
     // Total feedback by status
     const statusStats = await db
@@ -314,14 +275,14 @@ export const feedbackRouter = router({
 
     return {
       statusBreakdown: statusStats.reduce(
-        (acc, { status, count }) => {
+        (acc: Record<string, number>, { status, count }) => {
           acc[status] = Number(count);
           return acc;
         },
         {} as Record<string, number>
       ),
       categoryBreakdown: categoryStats.reduce(
-        (acc, { category, count }) => {
+        (acc: Record<string, number>, { category, count }) => {
           acc[category] = Number(count);
           return acc;
         },
@@ -335,19 +296,86 @@ export const feedbackRouter = router({
   /**
    * Delete feedback (admin only)
    */
-  delete: adminProcedure
+  deleteFeedback: adminProcedure
     .input(z.object({ feedbackId: z.number().int() }))
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database connection failed",
-        });
-      }
+      // const db = await getDb();
 
       await db.delete(feedback).where(eq(feedback.id, input.feedbackId));
 
       return { success: true, message: "Feedback deleted successfully" };
+    }),
+
+  handleTallyWebhook: publicProcedure
+    .input(z.custom<any>())
+    .mutation(async ({ input }) => {
+      const { eventType, data } = input;
+
+      if (eventType !== "FORM_RESPONSE") {
+        return { success: true, message: "Event ignored" };
+      }
+      if (!data || !data.fields) throw new Error("Invalid webhook payload");
+
+      const fields = data.fields.reduce((acc: any, field: any) => {
+        const label = field.label.toLowerCase().trim();
+        acc[label] = field.value;
+        return acc;
+      }, {});
+
+      const categoryMap: { [key: string]: string } = {
+        "🐛 bug report": "Bug",
+        "bug report": "Bug",
+        "💡 feature request": "Feature Request",
+        "feature request": "Feature Request",
+        "❤️ praise": "Praise",
+        "praise": "Praise",
+        "😕 complaint": "Complaint",
+        "complaint": "Complaint",
+        "💬 general feedback": "General",
+        "general feedback": "General",
+        "general": "General",
+        "🔧 other": "Other",
+        "other": "Other",
+      };
+      const rawCategory = fields.category || fields["what type of feedback is this?"] || "General";
+      const category = categoryMap[rawCategory.toLowerCase()] || "General";
+
+      let rating: number | null = null;
+      const ratingField = fields.rating || fields["rate your experience"] || fields["how would you rate your overall experience?"];
+      if (ratingField) {
+        const parsedRating = parseInt(String(ratingField).replace(/[^0-9]/g, ""));
+        if (!isNaN(parsedRating) && parsedRating >= 1 && parsedRating <= 5) rating = parsedRating;
+      }
+
+      const title = fields.title || fields["brief summary"] || fields["brief summary of your feedback"] || fields.summary || "Feedback from Tally";
+      const message = fields.details || fields["please provide more details"] || fields.message || fields.description || fields.feedback || "";
+      const userEmail = fields.email || fields["your email"] || fields["your email (optional)"] || null;
+      const userName = fields.name || fields["your name"] || fields["your name (optional)"] || null;
+
+      const metadata = JSON.stringify({
+        source: "tally",
+        tallyFormId: data.formId,
+        submittedAt: input.createdAt,
+        rawFields: fields,
+      });
+
+      // const db = await getDb();
+
+      await db.insert(feedback).values({
+        userId: null,
+        category: category as any,
+        rating,
+        title: title.substring(0, 255),
+        message,
+        userEmail: userEmail ? userEmail.substring(0, 320) : null,
+        userName: userName ? userName.substring(0, 255) : null,
+        source: "tally",
+        status: "New",
+        metadata,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return { success: true };
     }),
 });

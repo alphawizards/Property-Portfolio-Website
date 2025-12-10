@@ -1,15 +1,14 @@
 import { defineConfig } from "drizzle-kit";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL is required to run drizzle commands");
-}
-
 export default defineConfig({
   schema: "./drizzle/schema.ts",
-  out: "./drizzle",
-  dialect: "mysql",
+  out: "./drizzle/migrations",
+  dialect: "mysql", // PlanetScale uses MySQL
   dbCredentials: {
-    url: connectionString,
+    url: process.env.DATABASE_URL!,
   },
+  // PlanetScale does not support foreign key constraints
+  // We can't strictly disable them here in config but ensuring schema doesn't use reference() helps.
+  // Actually, 'casing' might be useful, but maintaining defaults is safer.
 });
+

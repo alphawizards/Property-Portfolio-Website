@@ -4,7 +4,7 @@ import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
-import type { User } from "../../drizzle/schema-postgres";
+import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
@@ -260,10 +260,10 @@ class SDKServer {
     // Regular authentication flow
     let cookieHeader: string | undefined;
     if ('headers' in req && req.headers instanceof Headers) {
-        cookieHeader = req.headers.get('cookie') || undefined;
+      cookieHeader = req.headers.get('cookie') || undefined;
     } else if ('headers' in req) {
-         // Express-like
-         cookieHeader = (req as any).headers.cookie;
+      // Express-like
+      cookieHeader = (req as any).headers.cookie;
     }
 
     const cookies = this.parseCookies(cookieHeader);
