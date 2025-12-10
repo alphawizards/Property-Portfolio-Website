@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,7 +54,7 @@ export default function PropertyDetailEnhanced() {
   const [openExpenseLog, setOpenExpenseLog] = useState<number | null>(null);
   const [isEditingValue, setIsEditingValue] = useState(false);
   const [editedValue, setEditedValue] = useState(0);
-  
+
   // Property details editing state
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editedDetails, setEditedDetails] = useState<{
@@ -108,7 +108,7 @@ export default function PropertyDetailEnhanced() {
       toast.error(`Failed to update rental income: ${error.message}`);
     },
   });
-  
+
   const updateExpenseMutation = trpc.expenses.update.useMutation({
     onSuccess: () => {
       toast.success("Expense growth rate updated");
@@ -118,7 +118,7 @@ export default function PropertyDetailEnhanced() {
       toast.error(`Failed to update expense: ${error.message}`);
     },
   });
-  
+
   const updatePropertyMutation = trpc.properties.update.useMutation({
     onSuccess: () => {
       utils.properties.getById.invalidate({ id: propertyId });
@@ -170,10 +170,10 @@ export default function PropertyDetailEnhanced() {
   const equity = currentValue - totalDebt;
   const purchasePrice = property.purchasePrice;
   const roi = purchasePrice > 0 ? ((currentValue - purchasePrice) / purchasePrice) * 100 : 0;
-  
+
   // Calculate weekly rental income (weeklyRent already calculated above before early returns)
   const annualRent = weeklyRent * 52;
-  
+
   // Calculate weekly expenses from breakdown with frequency
   const convertToWeekly = (amount: number, frequency: string) => {
     switch (frequency) {
@@ -189,11 +189,11 @@ export default function PropertyDetailEnhanced() {
         return amount;
     }
   };
-  
+
   const weeklyExpenses = expenseBreakdown?.reduce((total, item) => {
     return total + convertToWeekly(item.amount, item.frequency);
   }, 0) || 0;
-  
+
   // Calculate monthly mortgage payments
   const calculateMonthlyPayment = (principal: number, annualRate: number, years: number) => {
     const monthlyRate = annualRate / 100 / 12;
@@ -201,7 +201,7 @@ export default function PropertyDetailEnhanced() {
     if (monthlyRate === 0) return principal / numPayments;
     return principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
   };
-  
+
   const totalMonthlyMortgage = loans?.reduce((sum, loan) => {
     const monthlyPaymentDollars = calculateMonthlyPayment(
       loan.currentAmount / 100, // Convert cents to dollars
@@ -210,7 +210,7 @@ export default function PropertyDetailEnhanced() {
     );
     return sum + Math.round(monthlyPaymentDollars * 100); // Convert back to cents
   }, 0) || 0;
-  
+
   // Weekly cashflow (excluding mortgage)
   const weeklyCashflow = weeklyRent - weeklyExpenses;
 
@@ -292,7 +292,7 @@ export default function PropertyDetailEnhanced() {
               <Button variant="outline" onClick={() => setLocation(`/properties/${propertyId}/analysis`)}>
                 View Analysis
               </Button>
-              <Button 
+              <Button
                 variant="destructive"
                 onClick={() => {
                   if (window.confirm(`Are you sure you want to delete "${property.nickname || property.address}"? This action cannot be undone.`)) {
@@ -633,9 +633,9 @@ export default function PropertyDetailEnhanced() {
               <CardContent className="space-y-4">
                 <div>
                   <Label>Weekly Rent</Label>
-                  <Input 
-                    type="number" 
-                    value={editedWeeklyRent / 100} 
+                  <Input
+                    type="number"
+                    value={editedWeeklyRent / 100}
                     onChange={(e) => {
                       const value = Math.round(parseFloat(e.target.value || "0") * 100);
                       setEditedWeeklyRent(value);
@@ -667,30 +667,30 @@ export default function PropertyDetailEnhanced() {
                 </div>
                 <div>
                   <Label>Rent Growth Rate (%)</Label>
-                  <Input 
-                    type="number" 
-                    value={editedRentGrowth > 0 ? editedRentGrowth / 100 : (rental && rental[0] ? rental[0].growthRate / 100 : 3)} 
+                  <Input
+                    type="number"
+                    value={editedRentGrowth > 0 ? editedRentGrowth / 100 : (rental && rental[0] ? rental[0].growthRate / 100 : 3)}
                     onChange={(e) => setEditedRentGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
                     onBlur={() => {
                       if (editedRentGrowth > 0 && rental && rental[0]) {
                         updateRentalMutation.mutate({ id: rental[0].id, growthRate: editedRentGrowth });
                       }
                     }}
-                    step="0.1" 
+                    step="0.1"
                   />
                 </div>
                 <div>
                   <Label>Expense Growth Rate (%)</Label>
-                  <Input 
-                    type="number" 
-                    value={editedExpenseGrowth > 0 ? editedExpenseGrowth / 100 : (expenses && expenses[0] ? expenses[0].growthRate / 100 : 3)} 
+                  <Input
+                    type="number"
+                    value={editedExpenseGrowth > 0 ? editedExpenseGrowth / 100 : (expenses && expenses[0] ? expenses[0].growthRate / 100 : 3)}
                     onChange={(e) => setEditedExpenseGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
                     onBlur={() => {
                       if (editedExpenseGrowth > 0 && expenses && expenses[0]) {
                         updateExpenseMutation.mutate({ id: expenses[0].id, growthRate: editedExpenseGrowth });
                       }
                     }}
-                    step="0.1" 
+                    step="0.1"
                   />
                 </div>
               </CardContent>
@@ -738,7 +738,7 @@ export default function PropertyDetailEnhanced() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Expense Logs</CardTitle>
-                <Button 
+                <Button
                   size="sm"
                   onClick={() => {
                     addExpenseMutation.mutate({
@@ -812,7 +812,7 @@ export default function PropertyDetailEnhanced() {
           </Card>
         </div>
       </div>
-      
+
       {/* Loan Calculator Section */}
       <div id="loan-calculator" className="container mx-auto px-4 py-8">
         <div className="mb-6">

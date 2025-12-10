@@ -1,14 +1,20 @@
 import { z } from "zod";
 import Stripe from "stripe";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { isSecureRequest, getSessionCookieOptions } from "./_core/cookies";
 import * as db from "./db";
 import { SUBSCRIPTION_PRODUCTS, getTierFromPriceId } from "./products";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { sendSubscriptionConfirmation } from "./_core/email";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn("STRIPE_SECRET_KEY is missing. Subscription features will not work.");
+}
+const stripe = new Stripe(stripeKey, {
+  apiVersion: "2025-11-17.clover", // Updated to match server/subscription-router.ts
+  typescript: true,
 });
 
 export const subscriptionRouter = router({
@@ -37,10 +43,16 @@ export const subscriptionRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const isSecure = isSecureRequest(ctx.req as any);
+      const cookieOptions = getSessionCookieOptions(ctx.req as any);
       const product = SUBSCRIPTION_PRODUCTS[input.tier];
-      const origin = 'get' in ctx.req.headers && typeof ctx.req.headers.get === 'function'
-        ? ctx.req.headers.get('origin')
-        : (ctx.req as any).headers.origin;
+      const getHeader = (req: any, key: string) => {
+        if (typeof req.headers?.get === 'function') return req.headers.get(key);
+        if (req.headers && req.headers[key]) return req.headers[key];
+        return null;
+      };
+
+      const origin = getHeader(ctx.req, 'origin');
 
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",

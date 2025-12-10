@@ -1,26 +1,21 @@
-import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, Building2, Lock, PieChart, ShieldCheck } from "lucide-react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { ArrowRight, BarChart3, Building2, PieChart, ShieldCheck } from "lucide-react";
+import { useAuth, SignInButton, SignUpButton } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 
 export default function LandingPage() {
-    const { user, loading } = useAuth();
+    const { isSignedIn, isLoaded } = useAuth();
     const [, setLocation] = useLocation();
 
     // Redirect if already logged in
     useEffect(() => {
-        if (!loading && user) {
+        if (isLoaded && isSignedIn) {
             setLocation("/dashboard");
         }
-    }, [user, loading, setLocation]);
+    }, [isSignedIn, isLoaded, setLocation]);
 
-    const handleLogin = () => {
-        window.location.href = getLoginUrl();
-    };
-
-    if (loading) {
+    if (!isLoaded) {
         return <div className="min-h-screen flex items-center justify-center bg-background">Loading...</div>;
     }
 
@@ -36,8 +31,12 @@ export default function LandingPage() {
                         PropEquityLab
                     </div>
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={handleLogin}>Log in</Button>
-                        <Button onClick={handleLogin}>Get Started</Button>
+                        <SignInButton mode="modal">
+                            <Button variant="ghost">Log in</Button>
+                        </SignInButton>
+                        <SignUpButton mode="modal">
+                            <Button>Get Started</Button>
+                        </SignUpButton>
                     </div>
                 </div>
             </nav>
@@ -57,12 +56,12 @@ export default function LandingPage() {
                             Professional-grade analytics for serious property investors. Track equity, cashflow, and tax benefits in one beautiful dashboard.
                         </p>
                         <div className="space-x-4">
-                            <Button size="lg" onClick={handleLogin} className="gap-2">
-                                Start for Free <ArrowRight className="h-4 w-4" />
-                            </Button>
-                            <Button size="lg" variant="outline" onClick={handleLogin}>
-                                View Demo
-                            </Button>
+                            <SignUpButton mode="modal">
+                                <Button size="lg" className="gap-2">
+                                    Start for Free <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </SignUpButton>
+                            {/* Removed Demo button as it caused confusion and is now redundant with free sign up */}
                         </div>
                     </div>
                 </section>
