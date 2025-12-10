@@ -32,7 +32,7 @@ export default function LandingPage() {
                             Professional-grade tracking, equity projections, and cashflow analysis for Australian property investors.
                         </p>
                         <div className="flex justify-center gap-4">
-                            <Link href="/demo">
+                            <Link href="/dashboard">
                                 <Button size="lg" className="gap-2 text-lg">
                                     Start for Free <ArrowRight className="h-5 w-5" />
                                 </Button>
