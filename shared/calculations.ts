@@ -65,8 +65,8 @@ export interface LoanRepayment {
 /**
  * Calculate Interest Only loan repayment
  */
-export function calculateInterestOnlyRepayment(loan: Loan): LoanRepayment {
-  const annualRate = basisPointsToRate(loan.interestRate);
+export function calculateInterestOnlyRepayment(loan: Loan, rateOffset: number = 0): LoanRepayment {
+  const annualRate = basisPointsToRate(loan.interestRate + rateOffset);
   const monthlyRate = annualRate / 12;
   const interestPortion = Math.round(loan.currentAmount * monthlyRate);
 
@@ -82,12 +82,12 @@ export function calculateInterestOnlyRepayment(loan: Loan): LoanRepayment {
  * Calculate Principal & Interest loan repayment using amortization formula
  * M = P × [r(1+r)^n] / [(1+r)^n - 1]
  */
-export function calculatePrincipalAndInterestRepayment(loan: Loan): LoanRepayment {
-  const annualRate = basisPointsToRate(loan.interestRate);
+export function calculatePrincipalAndInterestRepayment(loan: Loan, rateOffset: number = 0): LoanRepayment {
+  const annualRate = basisPointsToRate(loan.interestRate + rateOffset);
   const monthlyRate = annualRate / 12;
   const numberOfPayments = loan.remainingTermYears * 12;
 
-  if (monthlyRate === 0) {
+  if (monthlyRate <= 0) { // Safety check for negative rates or zero
     // No interest case
     const monthlyPayment = Math.round(loan.currentAmount / numberOfPayments);
     return {
@@ -116,24 +116,24 @@ export function calculatePrincipalAndInterestRepayment(loan: Loan): LoanRepaymen
 /**
  * Calculate loan repayment based on loan structure
  */
-export function calculateLoanRepayment(loan: Loan): LoanRepayment {
+export function calculateLoanRepayment(loan: Loan, rateOffset: number = 0): LoanRepayment {
   if (loan.loanStructure === "InterestOnly") {
-    return calculateInterestOnlyRepayment(loan);
+    return calculateInterestOnlyRepayment(loan, rateOffset);
   } else {
-    return calculatePrincipalAndInterestRepayment(loan);
+    return calculatePrincipalAndInterestRepayment(loan, rateOffset);
   }
 }
 
 /**
  * Calculate remaining loan balance after a number of years
  */
-export function calculateRemainingBalance(loan: Loan, yearsElapsed: number): number {
+export function calculateRemainingBalance(loan: Loan, yearsElapsed: number, rateOffset: number = 0): number {
   if (loan.loanStructure === "InterestOnly") {
     // Interest only loans don't reduce principal
     return loan.currentAmount;
   }
 
-  const annualRate = basisPointsToRate(loan.interestRate);
+  const annualRate = basisPointsToRate(loan.interestRate + rateOffset);
   const monthlyRate = annualRate / 12;
   const totalPayments = loan.remainingTermYears * 12;
   const paymentsMade = yearsElapsed * 12;
@@ -142,11 +142,16 @@ export function calculateRemainingBalance(loan: Loan, yearsElapsed: number): num
     return 0; // Loan fully paid off
   }
 
-  const repayment = calculatePrincipalAndInterestRepayment(loan);
+  const repayment = calculatePrincipalAndInterestRepayment(loan, rateOffset);
   const monthlyPayment = repayment.monthlyPayment;
 
   // Calculate remaining balance using amortization formula
   const remainingPayments = totalPayments - paymentsMade;
+
+  if (monthlyRate <= 0) {
+    return Math.round(loan.currentAmount - (monthlyPayment * paymentsMade));
+  }
+
   const remainingBalance = (monthlyPayment * (Math.pow(1 + monthlyRate, remainingPayments) - 1)) / (monthlyRate * Math.pow(1 + monthlyRate, remainingPayments));
 
   return Math.round(remainingBalance);
@@ -308,7 +313,8 @@ export function calculatePropertyEquity(
   loans: Loan[],
   valuations: PropertyValuation[],
   growthRates: GrowthRatePeriod[],
-  targetYear: number
+  targetYear: number,
+  interestRateOffset: number = 0
 ): PropertyEquity {
   const propertyValue = calculatePropertyValue(property, valuations, growthRates, targetYear);
 
@@ -324,7 +330,7 @@ export function calculatePropertyEquity(
       continue; // Loan hasn't started yet
     }
 
-    const remainingBalance = calculateRemainingBalance(loan, loanYearsElapsed);
+    const remainingBalance = calculateRemainingBalance(loan, loanYearsElapsed, interestRateOffset);
     totalDebt += remainingBalance;
   }
 
@@ -359,7 +365,8 @@ export function calculatePropertyCashflow(
   expenses: ExpenseLog[],
   depreciation: DepreciationSchedule[],
   targetYear: number,
-  expenseGrowthOverride?: number
+  expenseGrowthOverride?: number,
+  interestRateOffset: number = 0
 ): PropertyCashflow {
   const rentalIncome = calculateRentalIncomeForYear(rentalIncomes, targetYear);
   const expensesAmount = calculateExpensesForYear(expenses, targetYear, expenseGrowthOverride);
@@ -368,7 +375,7 @@ export function calculatePropertyCashflow(
   for (const loan of loans) {
     const loanStartYear = getYear(loan.startDate);
     if (targetYear >= loanStartYear) {
-      const repayment = calculateLoanRepayment(loan);
+      const repayment = calculateLoanRepayment(loan, interestRateOffset);
       loanRepayments += repayment.annualPayment;
     }
   }
@@ -475,12 +482,14 @@ export function calculatePortfolioSummary(propertiesData: any[], targetYear: num
 /**
  * Generate portfolio projections over multiple years
  * @param expenseGrowthOverride Optional override for all expense growth rates (as percentage, e.g., 3 for 3%)
+ * @param interestRateOffset Optional override for interest rates (in basis points)
  */
 export function generatePortfolioProjections(
   propertiesData: any[],
   startYear: number,
   endYear: number,
-  expenseGrowthOverride?: number
+  expenseGrowthOverride?: number,
+  interestRateOffset: number = 0
 ): PortfolioProjection[] {
   const projections: PortfolioProjection[] = [];
 
@@ -495,7 +504,7 @@ export function generatePortfolioProjections(
     const properties: PropertyProjection[] = [];
 
     for (const data of propertiesData) {
-      const equity = calculatePropertyEquity(data.property, data.loans, data.valuations, data.growthRates, year);
+      const equity = calculatePropertyEquity(data.property, data.loans, data.valuations, data.growthRates, year, interestRateOffset);
       const cashflow = calculatePropertyCashflow(
         data.property,
         data.loans,
@@ -503,7 +512,8 @@ export function generatePortfolioProjections(
         data.expenses,
         data.depreciation,
         year,
-        expenseGrowthOverride
+        expenseGrowthOverride,
+        interestRateOffset
       );
 
       totalValue += equity.propertyValue;

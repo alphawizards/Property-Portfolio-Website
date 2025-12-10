@@ -21,10 +21,15 @@ export default function Dashboard() {
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("all");
   const [expenseGrowthOverride, setExpenseGrowthOverride] = useState<number | null>(null); // null = use property-specific rates
+  const [interestRateOffset, setInterestRateOffset] = useState<number>(0); // in basis points
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const utils = trpc.useUtils();
+
+  // Fetch portfolios
+  const { data: portfolios } = trpc.portfolios.list.useQuery();
 
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
@@ -52,8 +57,11 @@ export default function Dashboard() {
   const currentYear = new Date().getFullYear();
 
   // Use the new optimized dashboard query
+  // Use the new optimized dashboard query
   const { data: dashboardData } = trpc.portfolios.getDashboard.useQuery({
     scenarioId: currentScenarioId ?? undefined,
+    portfolioId: selectedPortfolioId !== "all" ? parseInt(selectedPortfolioId) : undefined,
+    interestRateOffset: interestRateOffset,
   });
 
   const properties = dashboardData?.properties;
@@ -64,6 +72,7 @@ export default function Dashboard() {
     endYear: currentYear + selectedYears,
     expenseGrowthOverride: expenseGrowthOverride,
     scenarioId: currentScenarioId ?? undefined,
+    interestRateOffset: interestRateOffset,
   });
 
   // Filter properties and projections based on selection
@@ -132,6 +141,20 @@ export default function Dashboard() {
             <p className="mt-2 text-muted-foreground">Welcome back, {user?.name}</p>
           </div>
           <div className="flex gap-3">
+            <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
+              <SelectTrigger className="w-40">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="All Portfolios" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Portfolios</SelectItem>
+                {portfolios?.map(p => (
+                  <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Link href="/properties/wizard">
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -307,40 +330,62 @@ export default function Dashboard() {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
-                  className="mt-4 rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4"
+                  className="mt-4 grid gap-4 md:grid-cols-2"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <label className="text-sm font-medium whitespace-nowrap">
-                        Portfolio Expense Growth Rate:
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        step="0.5"
-                        value={expenseGrowthOverride ?? ""}
-                        onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
-                        placeholder="Use property rates"
-                        className="w-24 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
-                      />
-                      <span className="text-sm text-muted-foreground">% per year</span>
+                  {/* Expense Growth Control */}
+                  <div className="rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <label className="text-sm font-medium whitespace-nowrap">
+                          Expense Growth:
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.5"
+                          value={expenseGrowthOverride ?? ""}
+                          onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
+                          placeholder="Default"
+                          className="w-20 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                      {expenseGrowthOverride !== null && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpenseGrowthOverride(null)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    {expenseGrowthOverride !== null && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExpenseGrowthOverride(null)}
-                      >
-                        Reset to Property Rates
-                      </Button>
-                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {expenseGrowthOverride === null
-                      ? "Using individual property expense growth rates"
-                      : `Overriding all properties with ${expenseGrowthOverride}% annual expense growth`}
-                  </p>
+
+                  {/* Interest Rate Simulator */}
+                  <div className="rounded-lg border border-fintech-yield/20 bg-fintech-yield/5 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium whitespace-nowrap">Simulate Rates:</label>
+                        <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+                          {[0, 100, 200, 300].map((bp) => (
+                            <button
+                              key={bp}
+                              onClick={() => setInterestRateOffset(bp)}
+                              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${interestRateOffset === bp
+                                  ? "bg-fintech-yield text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                              {bp === 0 ? "Actual" : `+${bp / 100}%`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </CardHeader>

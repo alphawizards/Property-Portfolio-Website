@@ -9,7 +9,7 @@ import PropertyDetailEnhanced from "@/pages/PropertyDetailEnhanced";
 import Comparison from "@/pages/Comparison";
 import Subscription from "@/pages/Subscription";
 import PropertyAnalysis from "@/pages/PropertyAnalysis";
-import AdminDashboard from "@/pages/AdminDashboard";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
 import LandingPage from "@/pages/LandingPage";
 import DemoDashboard from "@/pages/DemoDashboard";
 import MortgageCalculator from "@/pages/tools/MortgageCalculator";
@@ -22,8 +22,7 @@ import { NarrativeLoader } from "./components/ui/NarrativeLoader";
 import { Footer } from "./components/Footer";
 import { FeedbackWidget } from "./components/FeedbackWidget";
 
-import LandingPage from "@/pages/LandingPage";
-import DemoDashboard from "@/pages/DemoDashboard";
+
 
 // Lazy load Premium features
 const PremiumDashboard = lazy(() => import("@/pages/PremiumDashboard").then(m => ({ default: m.PremiumDashboard })));
@@ -43,6 +42,9 @@ function Router() {
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/demo" component={DemoDashboard} />
+      <Route path="/tools/mortgage-calculator" component={MortgageCalculator} />
+      <Route path="/tools/pay-calculator" component={PayCalculator} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/properties" component={Properties} />
       <Route path="/properties/new" component={AddPropertyExtended} />
@@ -64,7 +66,7 @@ function Router() {
           </Suspense>
         )}
       </Route>
-      <Route path="/admin" component={AdminDashboard} />
+
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

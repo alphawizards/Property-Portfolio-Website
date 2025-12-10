@@ -145,9 +145,10 @@ export const appRouter = router({
     }),
 
     getDashboard: protectedProcedure
-      .input(z.object({ 
+      .input(z.object({
         portfolioId: z.number().int().optional(),
-        scenarioId: z.number().int().optional()
+        scenarioId: z.number().int().optional(),
+        interestRateOffset: z.number().int().optional()
       }))
       .query(async ({ input, ctx }) => {
         let properties;
@@ -163,7 +164,7 @@ export const appRouter = router({
         }
 
         const currentYear = new Date().getFullYear();
-        
+
         const propertiesWithFinancials = await Promise.all(
           properties.map(async (property) => {
             const data = await db.getCompletePropertyData(property.id);
@@ -176,15 +177,16 @@ export const appRouter = router({
                 lvr: 0,
               };
             }
-            
+
             const financials = calc.calculatePropertyEquity(
               data.property,
               data.loans,
               data.valuations,
               data.growthRates,
-              currentYear
+              currentYear,
+              input.interestRateOffset ?? 0
             );
-            
+
             return {
               ...property,
               currentValue: financials.propertyValue,
@@ -207,7 +209,7 @@ export const appRouter = router({
           totalEquity: calc.centsToDollars(totalEquity),
           propertyCount: properties.length,
           properties: propertiesWithFinancials,
-          projections: [], 
+          projections: [],
           goal,
         };
       }),
@@ -267,9 +269,9 @@ export const appRouter = router({
       // Check if portfolio has properties
       const properties = await db.getPropertiesByPortfolioId(input.id);
       if (properties.length > 0) {
-        throw new TRPCError({ 
-          code: "PRECONDITION_FAILED", 
-          message: "Cannot delete portfolio with properties. Please move or delete properties first." 
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Cannot delete portfolio with properties. Please move or delete properties first."
         });
       }
       await db.deletePortfolio(input.id);
@@ -309,41 +311,41 @@ export const appRouter = router({
       .query(async ({ input, ctx }) => {
         const scenarioId = input?.scenarioId ?? null;
         const properties = await db.getPropertiesByUserId(ctx.user.id, scenarioId);
-      const currentYear = new Date().getFullYear();
-      
-      const propertiesWithFinancials = await Promise.all(
-        properties.map(async (property) => {
-          const data = await db.getCompletePropertyData(property.id);
-          if (!data) {
+        const currentYear = new Date().getFullYear();
+
+        const propertiesWithFinancials = await Promise.all(
+          properties.map(async (property) => {
+            const data = await db.getCompletePropertyData(property.id);
+            if (!data) {
+              return {
+                ...property,
+                currentValue: property.purchasePrice,
+                totalDebt: 0,
+                equity: property.purchasePrice,
+                lvr: 0,
+              };
+            }
+
+            const financials = calc.calculatePropertyEquity(
+              data.property,
+              data.loans,
+              data.valuations,
+              data.growthRates,
+              currentYear
+            );
+
             return {
               ...property,
-              currentValue: property.purchasePrice,
-              totalDebt: 0,
-              equity: property.purchasePrice,
-              lvr: 0,
+              currentValue: financials.propertyValue,
+              totalDebt: financials.totalDebt,
+              equity: financials.equity,
+              lvr: financials.lvr,
             };
-          }
-          
-          const financials = calc.calculatePropertyEquity(
-            data.property,
-            data.loans,
-            data.valuations,
-            data.growthRates,
-            currentYear
-          );
-          
-          return {
-            ...property,
-            currentValue: financials.propertyValue,
-            totalDebt: financials.totalDebt,
-            equity: financials.equity,
-            lvr: financials.lvr,
-          };
-        })
-      );
-      
-      return propertiesWithFinancials;
-    }),
+          })
+        );
+
+        return propertiesWithFinancials;
+      }),
 
     getById: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ input, ctx }) => {
       const property = await db.getPropertyById(input.id);
@@ -713,14 +715,14 @@ export const appRouter = router({
         }
         // Calculate total amount from breakdown
         const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
-        
+
         // Update expense log with new total amount and growth rate
         const updates: { totalAmount: number; growthRate?: number } = { totalAmount };
         if (input.growthRate !== undefined) {
           updates.growthRate = input.growthRate;
         }
         await db.updateExpenseLog(input.id, updates);
-        
+
         // Delete existing breakdown items
         await db.deleteExpenseBreakdownByLogId(input.id);
         // Add new breakdown items
@@ -789,7 +791,7 @@ export const appRouter = router({
   }),
 
   // ============ CALCULATIONS ============
-  calculations: router({ 
+  calculations: router({
     portfolioSummary: protectedProcedure
       .input(z.object({ year: z.number().int() }))
       .query(async ({ input, ctx }) => {
@@ -805,6 +807,7 @@ export const appRouter = router({
           endYear: z.number().int(),
           expenseGrowthOverride: z.number().nullable().optional(), // Override expense growth rate (as percentage, e.g., 3 for 3%)
           scenarioId: z.number().int().optional(),
+          interestRateOffset: z.number().int().optional(),
         })
       )
       .query(async ({ input, ctx }) => {
@@ -815,7 +818,8 @@ export const appRouter = router({
           portfolioData.properties,
           input.startYear,
           input.endYear,
-          input.expenseGrowthOverride ?? undefined
+          input.expenseGrowthOverride ?? undefined,
+          input.interestRateOffset ?? 0
         );
       }),
 
