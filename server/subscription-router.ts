@@ -1,6 +1,7 @@
 import { z } from "zod";
 import Stripe from "stripe";
 import { protectedProcedure, router } from "./_core/trpc";
+import { isSecureRequest, getSessionCookieOptions } from "./_core/cookies";
 import * as db from "./db";
 import { SUBSCRIPTION_PRODUCTS } from "./products";
 
@@ -34,6 +35,8 @@ export const subscriptionRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const isSecure = isSecureRequest(ctx.req as any);
+      const cookieOptions = getSessionCookieOptions(ctx.req as any);
       const product = SUBSCRIPTION_PRODUCTS[input.tier];
       const origin = 'get' in ctx.req.headers && typeof ctx.req.headers.get === 'function'
         ? ctx.req.headers.get('origin')
