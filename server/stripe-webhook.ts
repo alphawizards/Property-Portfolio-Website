@@ -2,16 +2,21 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import * as db from "./db";
 import { getTierFromPriceId } from "./products";
-import { 
-  sendSubscriptionConfirmation, 
-  sendPaymentFailedEmail, 
-  sendCancellationEmail 
+import {
+  sendSubscriptionConfirmation,
+  sendPaymentFailedEmail,
+  sendCancellationEmail
 } from "./_core/email";
 import { eq } from "drizzle-orm";
 import { users } from "../drizzle/schema-postgres";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn("STRIPE_SECRET_KEY is missing. Webhooks will not function correctly.");
+}
+const stripe = new Stripe(stripeKey, {
+  apiVersion: "2024-11-20.acacia", // Updated to a known valid version
+  typescript: true,
 });
 
 export async function handleStripeWebhook(req: Request, res: Response) {
@@ -66,7 +71,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
 
             // Update user subscription
             const status = subscription.status === "active" || subscription.status === "canceled" || subscription.status === "past_due" || subscription.status === "trialing" || subscription.status === "incomplete" ? subscription.status : "active";
-            
+
             await db.updateUserSubscription(parseInt(userId), {
               subscriptionTier: tier,
               stripeCustomerId: session.customer as string,
@@ -84,10 +89,10 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             if (user?.email) {
               try {
                 const billingCycle = tier === "PREMIUM_MONTHLY" ? "Monthly" : "Annual";
-                const nextBillingDate = (subscription as any).current_period_end 
+                const nextBillingDate = (subscription as any).current_period_end
                   ? new Date((subscription as any).current_period_end * 1000).toLocaleDateString()
                   : "N/A";
-                
+
                 await sendSubscriptionConfirmation(
                   user.name || 'there',
                   user.email,
@@ -121,7 +126,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           const tier = getTierFromPriceId(priceId);
 
           const status = subscription.status === "active" || subscription.status === "canceled" || subscription.status === "past_due" || subscription.status === "trialing" || subscription.status === "incomplete" ? subscription.status : "active";
-          
+
           await db.updateUserSubscription(user.id, {
             subscriptionTier: tier,
             subscriptionStatus: status,
@@ -147,7 +152,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
 
         // Get current tier name before downgrading
         const currentTier = user.subscriptionTier === "PREMIUM_MONTHLY" ? "Premium Monthly" : "Premium Annual";
-        const endDate = (subscription as any).current_period_end 
+        const endDate = (subscription as any).current_period_end
           ? new Date((subscription as any).current_period_end * 1000).toLocaleDateString()
           : new Date().toLocaleDateString();
 
@@ -174,7 +179,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             console.error('[Webhook] Failed to send cancellation email:', emailError);
           }
         }
-        
+
         break;
       }
 

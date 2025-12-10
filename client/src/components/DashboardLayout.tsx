@@ -1,5 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserButton, useUser } from "@clerk/clerk-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +19,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users, Plus, GitBranch } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -54,40 +52,19 @@ export default function DashboardLayout({
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
-  const { loading, user } = useAuth();
+  const { isLoaded, isSignedIn } = useUser();
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading) {
+  if (!isLoaded) {
     return <DashboardLayoutSkeleton />
   }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
-        </div>
-      </div>
-    );
+  // Double check signed in, though App.tsx should handle this.
+  if (!isSignedIn) {
+    return null;
   }
 
   return (
@@ -114,7 +91,6 @@ function DashboardLayoutContent({
   children,
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
-  const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -127,12 +103,7 @@ function DashboardLayoutContent({
   const { currentScenarioId, setCurrentScenarioId } = useScenario();
   const [isCreateScenarioOpen, setIsCreateScenarioOpen] = useState(false);
   const [newScenarioName, setNewScenarioName] = useState("");
-  
-  // Fetch scenarios for the current property (assuming we want to list all scenarios for the user's portfolio)
-  // Note: The original requirement says "List user's scenarios". 
-  // Since scenarios are linked to a property in the DB schema (loanScenarios), but the requirement implies portfolio-level scenarios.
-  // Let's check the schema again. Ah, we added a `scenarios` table linked to `originalPortfolioId`.
-  // We need a way to list scenarios for the user. The router `scenarios` (which we renamed to `loanScenarios` in one place, but added `scenarios` router for cloning)
+
   const { data: scenarios } = trpc.scenarios.list.useQuery();
   const utils = trpc.useUtils();
 
@@ -149,8 +120,7 @@ function DashboardLayoutContent({
     }
   });
 
-  
-  // We need the user's portfolios to know what to clone.
+
   const { data: portfolios } = trpc.portfolios.list.useQuery();
   const defaultPortfolioId = portfolios?.[0]?.id;
 
@@ -230,13 +200,13 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <div className="px-2 py-2">
-               {!isCollapsed && (
+              {!isCollapsed && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full justify-between mb-4">
                       <span className="truncate">
-                        {currentScenarioId 
-                          ? scenarios?.find(s => s.id === currentScenarioId)?.name 
+                        {currentScenarioId
+                          ? scenarios?.find(s => s.id === currentScenarioId)?.name
                           : "Live Portfolio"}
                       </span>
                       <GitBranch className="h-4 w-4 ml-2 opacity-50" />
@@ -248,8 +218,8 @@ function DashboardLayoutContent({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {scenarios?.map((scenario) => (
-                      <DropdownMenuItem 
-                        key={scenario.id} 
+                      <DropdownMenuItem
+                        key={scenario.id}
                         onClick={() => setCurrentScenarioId(scenario.id)}
                       >
                         {scenario.name}
@@ -262,7 +232,7 @@ function DashboardLayoutContent({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-               )}
+              )}
             </div>
 
             <SidebarMenu className="px-2 py-1">
@@ -288,34 +258,18 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : 'px-2'}`}>
+              <UserButton
+                afterSignOutUrl="/"
+                showName={!isCollapsed}
+                appearance={{
+                  elements: {
+                    userButtonBox: isCollapsed ? "justify-center" : "w-full justify-start",
+                    userButtonOuterIdentifier: "truncate text-sm font-medium ml-2 text-foreground",
+                  }
+                }}
+              />
+            </div>
           </SidebarFooter>
         </Sidebar>
         <div
