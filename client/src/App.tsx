@@ -19,18 +19,30 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ScenarioProvider } from "./contexts/ScenarioContext";
 import { NarrativeLoader } from "./components/ui/NarrativeLoader";
+import { Footer } from "./components/Footer";
+import { FeedbackWidget } from "./components/FeedbackWidget";
+
+import LandingPage from "@/pages/LandingPage";
+import DemoDashboard from "@/pages/DemoDashboard";
 
 // Lazy load Premium features
 const PremiumDashboard = lazy(() => import("@/pages/PremiumDashboard").then(m => ({ default: m.PremiumDashboard })));
 const PropertyWizard = lazy(() => import("@/pages/PropertyWizard").then(m => ({ default: m.PropertyWizard })));
+
+// Auth Guard Component
+function AuthGuard({ children, component: Component }: { children?: React.ReactNode, component?: React.ComponentType<any> }) {
+  // Use the useAuth hook to check authentication status
+  const { isAuthenticated, loading } = { isAuthenticated: true, loading: false }; // Placeholder - replaced by real hook inside component
+  // Note: Real implementation needs to happen inside a component that uses the hook. 
+  // Since wouter's Route component logic is simple, we'll handle auth redirect inside the page components or a wrapper.
+  return Component ? <Component /> : <>{children}</>;
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/demo" component={DemoDashboard} />
-      <Route path="/tools/mortgage-calculator" component={MortgageCalculator} />
-      <Route path="/tools/pay-calculator" component={PayCalculator} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/properties" component={Properties} />
       <Route path="/properties/new" component={AddPropertyExtended} />
@@ -66,7 +78,10 @@ function App() {
         <ScenarioProvider>
           <TooltipProvider>
             <Toaster />
+            {/* Router handles the page switching */}
             <Router />
+            {/* Feedback Widget should appear on all pages */}
+            <FeedbackWidget />
           </TooltipProvider>
         </ScenarioProvider>
       </ThemeProvider>
