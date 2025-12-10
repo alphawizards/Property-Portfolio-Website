@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import * as featureGates from "../feature-gates";
 import { getDb } from "../db";
@@ -15,6 +16,12 @@ export const featureGatesRouter = router({
    */
   canAddProperty: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.canAddProperty(db, ctx.user.id);
   }),
 
@@ -23,6 +30,12 @@ export const featureGatesRouter = router({
    */
   getPropertyCount: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.getPropertyCount(db, ctx.user.id);
   }),
 
@@ -33,6 +46,12 @@ export const featureGatesRouter = router({
     .input(z.object({ years: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
       return await featureGates.canViewForecast(db, ctx.user.id, input.years);
     }),
 
@@ -41,6 +60,12 @@ export const featureGatesRouter = router({
    */
   canUseTaxCalculator: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.canUseTaxCalculator(db, ctx.user.id);
   }),
 
@@ -49,6 +74,12 @@ export const featureGatesRouter = router({
    */
   canUseInvestmentComparison: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.canUseInvestmentComparison(db, ctx.user.id);
   }),
 
@@ -57,6 +88,12 @@ export const featureGatesRouter = router({
    */
   canExportReports: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.canExportReports(db, ctx.user.id);
   }),
 
@@ -65,6 +102,12 @@ export const featureGatesRouter = router({
    */
   canUseAdvancedAnalytics: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.canUseAdvancedAnalytics(db, ctx.user.id);
   }),
 
@@ -73,6 +116,12 @@ export const featureGatesRouter = router({
    */
   getAllFeatureAccess: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
     return await featureGates.getAllFeatureAccess(db, ctx.user.id);
   }),
 });

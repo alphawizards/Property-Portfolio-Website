@@ -36,11 +36,17 @@ export const adminRouter = router({
     )
     .query(async ({ input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
       const { page, pageSize, sortBy, filterTier } = input;
       const offset = (page - 1) * pageSize;
 
       // Build query
-      let query = db
+      let query: any = db
         .select({
           id: users.id,
           name: users.name,
@@ -57,7 +63,7 @@ export const adminRouter = router({
 
       // Filter by tier if not ALL
       if (filterTier !== "ALL") {
-        query = query.where(eq(users.subscriptionTier, filterTier));
+        query = query.where(eq(users.subscriptionTier, filterTier as any));
       }
 
       // Apply sorting
@@ -89,6 +95,12 @@ export const adminRouter = router({
    */
   getStats: adminProcedure.query(async () => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
 
     // Total users by tier
     const tierStats = await db
@@ -132,7 +144,11 @@ export const adminRouter = router({
       newUsersThisMonth,
       tierBreakdown: tierStats.reduce(
         (acc, { tier, count }) => {
-          acc[tier] = count;
+          if (tier) {
+            acc[tier] = count;
+          } else {
+            acc["FREE"] = (acc["FREE"] || 0) + count;
+          }
           return acc;
         },
         {} as Record<string, number>
@@ -147,6 +163,12 @@ export const adminRouter = router({
     .input(z.object({ userId: z.number().int() }))
     .query(async ({ input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
 
       const user = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
       if (!user.length) {
@@ -184,6 +206,12 @@ export const adminRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
 
       await db
         .update(users)
@@ -206,6 +234,12 @@ export const adminRouter = router({
    */
   getRevenueMetrics: adminProcedure.query(async () => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
 
     const subscriptions = await db
       .select({

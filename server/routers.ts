@@ -10,6 +10,7 @@ import { subscriptionRouter } from "./subscription-router";
 import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
+import { authRouter } from "./routers/auth-router";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -125,18 +126,7 @@ export const appRouter = router({
   featureGates: featureGatesRouter,
   admin: adminRouter,
   feedback: feedbackRouter,
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      if (ctx.res) {
-        const cookieOptions = getSessionCookieOptions(ctx.req as any);
-        (ctx.res as any).clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      }
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  auth: authRouter,
 
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({

@@ -14,6 +14,7 @@ import LandingPage from "@/pages/LandingPage";
 import DemoDashboard from "@/pages/DemoDashboard";
 import MortgageCalculator from "@/pages/tools/MortgageCalculator";
 import PayCalculator from "@/pages/tools/PayCalculator";
+import DemoLoginPage from "@/pages/DemoLoginPage";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -67,6 +68,7 @@ function Router() {
         )}
       </Route>
 
+      <Route path="/demo-login" component={DemoLoginPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

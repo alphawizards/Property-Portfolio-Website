@@ -2,8 +2,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useScenario } from "@/contexts/ScenarioContext";
-import { DashboardView } from "@/components/DashboardView";
+import { Link } from "wouter";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -130,11 +134,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border-b bg-card px-6 py-4"
-      >
+      <div className="border-b bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Property Portfolio Analyzer</h1>
@@ -172,7 +172,7 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
-      </motion.header>
+      </div>
 
       <div className="container mx-auto space-y-6 py-8">
         {/* Summary Cards */}
