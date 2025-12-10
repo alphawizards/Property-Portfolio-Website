@@ -13,6 +13,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import LandingPage from "@/pages/LandingPage";
 import DemoDashboard from "@/pages/DemoDashboard";
 import MortgageCalculator from "@/pages/tools/MortgageCalculator";
+import PayCalculator from "@/pages/tools/PayCalculator";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/demo" component={DemoDashboard} />
       <Route path="/tools/mortgage-calculator" component={MortgageCalculator} />
+      <Route path="/tools/pay-calculator" component={PayCalculator} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/properties" component={Properties} />
       <Route path="/properties/new" component={AddPropertyExtended} />
