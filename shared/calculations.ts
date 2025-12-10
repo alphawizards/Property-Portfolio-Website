@@ -416,6 +416,9 @@ export interface PropertyProjection {
   debt: number;
   equity: number;
   cashflow: number;
+  rentalIncome: number;
+  expenses: number;
+  loanRepayments: number;
 }
 
 export interface PortfolioProjection {
@@ -519,6 +522,9 @@ export function generatePortfolioProjections(
         debt: equity.totalDebt,
         equity: equity.equity,
         cashflow: cashflow.netCashflow,
+        rentalIncome: cashflow.rentalIncome,
+        expenses: cashflow.expenses,
+        loanRepayments: cashflow.loanRepayments,
       });
     }
 
