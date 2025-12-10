@@ -1,4 +1,4 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 export default function PropertyAnalysis() {
   const { id } = useParams<{ id: string }>();
   const propertyId = parseInt(id || "0");
-  
+
   const [selectedYears, setSelectedYears] = useState(30);
   const [loanStructure, setLoanStructure] = useState<"InterestOnly" | "PrincipalAndInterest">("InterestOnly");
   const [ioPeriod, setIOPeriod] = useState(5);
@@ -42,7 +42,7 @@ export default function PropertyAnalysis() {
   // Calculate projections based on loan structure
   const calculateDebtProjection = () => {
     if (!loans || loans.length === 0) return [];
-    
+
     const projectionData = [];
     const mainLoan = loans.find(l => l.loanType === "PrincipalLoan");
     if (!mainLoan) return [];
@@ -53,7 +53,7 @@ export default function PropertyAnalysis() {
 
     for (let year = 0; year <= selectedYears; year++) {
       const monthsElapsed = year * 12;
-      
+
       if (loanStructure === "InterestOnly") {
         // Interest Only: balance stays constant during IO period, then P&I
         if (year < ioPeriod) {
@@ -62,11 +62,11 @@ export default function PropertyAnalysis() {
           // Switch to P&I after IO period
           const monthsSinceIOEnd = monthsElapsed - (ioPeriod * 12);
           const remainingTermMonths = totalMonths - (ioPeriod * 12);
-          
+
           if (remainingTermMonths > 0 && monthsSinceIOEnd > 0) {
-            const monthlyPayment = (mainLoan.currentAmount * monthlyRate * Math.pow(1 + monthlyRate, remainingTermMonths)) / 
-                                   (Math.pow(1 + monthlyRate, remainingTermMonths) - 1);
-            
+            const monthlyPayment = (mainLoan.currentAmount * monthlyRate * Math.pow(1 + monthlyRate, remainingTermMonths)) /
+              (Math.pow(1 + monthlyRate, remainingTermMonths) - 1);
+
             let balance = mainLoan.currentAmount;
             for (let m = 0; m < monthsSinceIOEnd; m++) {
               const interest = balance * monthlyRate;
@@ -80,9 +80,9 @@ export default function PropertyAnalysis() {
       } else {
         // Principal & Interest from the start
         if (monthsElapsed > 0) {
-          const monthlyPayment = (mainLoan.currentAmount * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
-                                 (Math.pow(1 + monthlyRate, totalMonths) - 1);
-          
+          const monthlyPayment = (mainLoan.currentAmount * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) /
+            (Math.pow(1 + monthlyRate, totalMonths) - 1);
+
           let balance = mainLoan.currentAmount;
           for (let m = 0; m < monthsElapsed; m++) {
             const interest = balance * monthlyRate;
@@ -108,16 +108,16 @@ export default function PropertyAnalysis() {
   // Calculate cashflow breakdown
   const calculateCashflowBreakdown = () => {
     if (!rental || !expenses || rental.length === 0 || expenses.length === 0) return [];
-    
+
     const projectionData = [];
     const currentRental = rental[0];
     const currentExpense = expenses[0];
-    
+
     const weeklyRent = currentRental.amount;
     const annualRent = (weeklyRent * 52);
     const monthlyExpense = currentExpense.totalAmount;
     const annualExpense = monthlyExpense * 12;
-    
+
     const rentalGrowth = (currentRental.growthRate || 0) / 10000;
     const expenseGrowth = (currentExpense.growthRate || 0) / 10000;
 
@@ -289,7 +289,7 @@ export default function PropertyAnalysis() {
 
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900">
-                {loanStructure === "InterestOnly" 
+                {loanStructure === "InterestOnly"
                   ? `Interest Only for ${ioPeriod} years, then switches to Principal & Interest for the remaining term. Debt stays constant during IO period.`
                   : "Principal & Interest from the start. Debt decreases steadily over the loan term."}
               </p>

@@ -5,8 +5,13 @@ import { isSecureRequest, getSessionCookieOptions } from "./_core/cookies";
 import * as db from "./db";
 import { SUBSCRIPTION_PRODUCTS } from "./products";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-11-17.clover",
+const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy";
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn("STRIPE_SECRET_KEY is missing. Subscription features will not work.");
+}
+const stripe = new Stripe(stripeKey, {
+  apiVersion: "2024-11-20.acacia", // Updated to a known valid version or keep user's if valid.
+  typescript: true,
 });
 
 export const subscriptionRouter = router({

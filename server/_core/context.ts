@@ -1,59 +1,57 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
-import type { User } from "../../drizzle/schema-postgres";
-import { sdk } from "./sdk";
+import { sessions, users } from "@clerk/clerk-sdk-node"; //
+import * as db from "../db";
 
 export type TrpcContext = {
-  req: CreateExpressContextOptions["req"] | Request;
-  res: CreateExpressContextOptions["res"] | null;
-  user: User | null;
+  req: CreateExpressContextOptions["req"];
+  res: CreateExpressContextOptions["res"];
+  user: any | null;
 };
 
-export async function createContext(
-  opts: CreateExpressContextOptions
-): Promise<TrpcContext> {
-  let user: User | null = null;
+export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
+  const { req, res } = opts;
+  let user = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
-  }
+    // 1. Check for Clerk Token in Authorization header or Cookie
+    // Clerk usually sends "Authorization: Bearer <token>"
+    // or a "__session" cookie.
+    const token = req.headers.authorization?.replace('Bearer ', '') || (req.cookies as any)?.__session;
 
-  // DEMO MODE: Auto-login as demo user if no authentication
-  // This allows viewing the seeded data without OAuth setup
-  if (!user && process.env.NODE_ENV === 'development' && process.env.DEMO_MODE === 'true') {
-    const { getUserByOpenId } = await import('../db');
-    const demoUser = await getUserByOpenId('demo_golden_master_12345');
-    if (demoUser) {
-      console.log('[DEMO MODE] Auto-authenticated as demo user');
-      user = demoUser;
+    if (token) {
+      // 2. Verify the session
+      const session = await sessions.verifySession(token, process.env.CLERK_SECRET_KEY);
+
+      if (session) {
+        // 3. Sync with your local DB
+        // We use Clerk's User ID (sub) to match your DB's openId
+        const dbUser = await db.getUserByOpenId(session.userId);
+
+        if (dbUser) {
+          user = dbUser;
+        } else {
+          // Optional: Just-in-time creation if they don't exist in your DB yet
+          const clerkUser = await users.getUser(session.userId);
+          const email = clerkUser.emailAddresses[0]?.emailAddress;
+
+          await db.upsertUser({
+            openId: session.userId,
+            email: email,
+            name: `${clerkUser.firstName} ${clerkUser.lastName}`,
+            role: 'user',
+            loginMethod: 'clerk'
+          });
+          user = await db.getUserByOpenId(session.userId);
+        }
+      }
     }
+  } catch (err) {
+    console.error("Auth verification failed:", err);
   }
 
   return {
-    req: opts.req,
-    res: opts.res,
-    user,
-  };
-}
-
-export async function createFetchContext(
-  opts: FetchCreateContextFnOptions
-): Promise<TrpcContext> {
-  let user: User | null = null;
-
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
-  }
-
-  return {
-    req: opts.req,
-    res: null,
+    req,
+    res,
     user,
   };
 }
