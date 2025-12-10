@@ -375,8 +375,8 @@ export default function Dashboard() {
                               key={bp}
                               onClick={() => setInterestRateOffset(bp)}
                               className={`rounded px-2 py-1 text-xs font-medium transition-colors ${interestRateOffset === bp
-                                  ? "bg-fintech-yield text-primary-foreground"
-                                  : "text-muted-foreground hover:text-foreground"
+                                ? "bg-fintech-yield text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground"
                                 }`}
                             >
                               {bp === 0 ? "Actual" : `+${bp / 100}%`}
@@ -757,47 +757,28 @@ export default function Dashboard() {
           </motion.div>
         )}
       </div> {/* End container */}
-
-      // Find this property's data in the projection
-      const propertyData = p.properties.find(prop => prop.propertyId === selectedProp.id);
-      if (!propertyData) return null;
-
-      return {
-        year: `FY ${p.year.toString().slice(-2)}`,
-        fullYear: p.year,
-        "Portfolio Value": propertyData.value / 100,
-        "Total Debt": propertyData.debt / 100,
-        "Portfolio Equity": propertyData.equity / 100,
-        "Net Cashflow": propertyData.cashflow / 100,
-        // For single property, we need to get detailed cashflow from backend
-        // For now, approximate based on net cashflow
-        "Rental Income": Math.max(0, propertyData.cashflow / 100 * 3), // Rough estimate
-        "Expenses": Math.max(0, -propertyData.cashflow / 100 * 0.5), // Rough estimate
-        "Loan Repayments": Math.max(0, -propertyData.cashflow / 100 * 1.5), // Rough estimate
-      };
-    }).filter(Boolean) || [];
-
-  return (
-    <DashboardView
-      user={user}
-      properties={properties ?? []}
-      summary={filteredSummary}
-      goal={goal}
-      chartData={chartData}
-      selectedYears={selectedYears}
-      setSelectedYears={setSelectedYears}
-      viewMode={viewMode}
-      setViewMode={setViewMode}
-      selectedPropertyId={selectedPropertyId}
-      setSelectedPropertyId={setSelectedPropertyId}
-      expenseGrowthOverride={expenseGrowthOverride}
-      setExpenseGrowthOverride={setExpenseGrowthOverride}
-      deleteDialogOpen={deleteDialogOpen}
-      setDeleteDialogOpen={setDeleteDialogOpen}
-      propertyToDelete={propertyToDelete}
-      onDeleteClick={handleDeleteClick}
-      onConfirmDelete={confirmDelete}
-      isDemo={false}
-    />
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{propertyToDelete?.name}"? This action cannot be undone.
+              All associated data including loans, rental income, and expense logs will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
+
