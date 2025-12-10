@@ -2,8 +2,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useScenario } from "@/contexts/ScenarioContext";
-import { DashboardView } from "@/components/DashboardView";
+import { Link } from "wouter";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -21,10 +25,15 @@ export default function Dashboard() {
   const [selectedYears, setSelectedYears] = useState(30);
   const [viewMode, setViewMode] = useState<"equity" | "cashflow" | "debt">("equity");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all");
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("all");
   const [expenseGrowthOverride, setExpenseGrowthOverride] = useState<number | null>(null); // null = use property-specific rates
+  const [interestRateOffset, setInterestRateOffset] = useState<number>(0); // in basis points
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: number; name: string } | null>(null);
   const utils = trpc.useUtils();
+
+  // Fetch portfolios
+  const { data: portfolios } = trpc.portfolios.list.useQuery();
 
   const deletePropertyMutation = trpc.properties.delete.useMutation({
     onSuccess: () => {
@@ -52,8 +61,11 @@ export default function Dashboard() {
   const currentYear = new Date().getFullYear();
 
   // Use the new optimized dashboard query
+  // Use the new optimized dashboard query
   const { data: dashboardData } = trpc.portfolios.getDashboard.useQuery({
     scenarioId: currentScenarioId ?? undefined,
+    portfolioId: selectedPortfolioId !== "all" ? parseInt(selectedPortfolioId) : undefined,
+    interestRateOffset: interestRateOffset,
   });
 
   const properties = dashboardData?.properties;
@@ -64,6 +76,7 @@ export default function Dashboard() {
     endYear: currentYear + selectedYears,
     expenseGrowthOverride: expenseGrowthOverride,
     scenarioId: currentScenarioId ?? undefined,
+    interestRateOffset: interestRateOffset,
   });
 
   // Filter properties and projections based on selection
@@ -121,17 +134,27 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border-b bg-card px-6 py-4"
-      >
+      <div className="border-b bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Property Portfolio Analyzer</h1>
             <p className="mt-2 text-muted-foreground">Welcome back, {user?.name}</p>
           </div>
           <div className="flex gap-3">
+            <Select value={selectedPortfolioId} onValueChange={setSelectedPortfolioId}>
+              <SelectTrigger className="w-40">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="All Portfolios" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Portfolios</SelectItem>
+                {portfolios?.map(p => (
+                  <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Link href="/properties/wizard">
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
@@ -149,7 +172,7 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
-      </motion.header>
+      </div>
 
       <div className="container mx-auto space-y-6 py-8">
         {/* Summary Cards */}
@@ -307,40 +330,62 @@ export default function Dashboard() {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
-                  className="mt-4 rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4"
+                  className="mt-4 grid gap-4 md:grid-cols-2"
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <label className="text-sm font-medium whitespace-nowrap">
-                        Portfolio Expense Growth Rate:
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        step="0.5"
-                        value={expenseGrowthOverride ?? ""}
-                        onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
-                        placeholder="Use property rates"
-                        className="w-24 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
-                      />
-                      <span className="text-sm text-muted-foreground">% per year</span>
+                  {/* Expense Growth Control */}
+                  <div className="rounded-lg border border-fintech-debt/20 bg-fintech-debt/5 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 flex-1">
+                        <label className="text-sm font-medium whitespace-nowrap">
+                          Expense Growth:
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.5"
+                          value={expenseGrowthOverride ?? ""}
+                          onChange={(e) => setExpenseGrowthOverride(e.target.value ? parseFloat(e.target.value) : null)}
+                          placeholder="Default"
+                          className="w-20 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-fintech-yield"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                      {expenseGrowthOverride !== null && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpenseGrowthOverride(null)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
-                    {expenseGrowthOverride !== null && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setExpenseGrowthOverride(null)}
-                      >
-                        Reset to Property Rates
-                      </Button>
-                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {expenseGrowthOverride === null
-                      ? "Using individual property expense growth rates"
-                      : `Overriding all properties with ${expenseGrowthOverride}% annual expense growth`}
-                  </p>
+
+                  {/* Interest Rate Simulator */}
+                  <div className="rounded-lg border border-fintech-yield/20 bg-fintech-yield/5 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium whitespace-nowrap">Simulate Rates:</label>
+                        <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+                          {[0, 100, 200, 300].map((bp) => (
+                            <button
+                              key={bp}
+                              onClick={() => setInterestRateOffset(bp)}
+                              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${interestRateOffset === bp
+                                ? "bg-fintech-yield text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                              {bp === 0 ? "Actual" : `+${bp / 100}%`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </CardHeader>
@@ -712,47 +757,28 @@ export default function Dashboard() {
           </motion.div>
         )}
       </div> {/* End container */}
-
-      // Find this property's data in the projection
-      const propertyData = p.properties.find(prop => prop.propertyId === selectedProp.id);
-      if (!propertyData) return null;
-
-      return {
-        year: `FY ${p.year.toString().slice(-2)}`,
-        fullYear: p.year,
-        "Portfolio Value": propertyData.value / 100,
-        "Total Debt": propertyData.debt / 100,
-        "Portfolio Equity": propertyData.equity / 100,
-        "Net Cashflow": propertyData.cashflow / 100,
-        // For single property, we need to get detailed cashflow from backend
-        // For now, approximate based on net cashflow
-        "Rental Income": Math.max(0, propertyData.cashflow / 100 * 3), // Rough estimate
-        "Expenses": Math.max(0, -propertyData.cashflow / 100 * 0.5), // Rough estimate
-        "Loan Repayments": Math.max(0, -propertyData.cashflow / 100 * 1.5), // Rough estimate
-      };
-    }).filter(Boolean) || [];
-
-  return (
-    <DashboardView
-      user={user}
-      properties={properties ?? []}
-      summary={filteredSummary}
-      goal={goal}
-      chartData={chartData}
-      selectedYears={selectedYears}
-      setSelectedYears={setSelectedYears}
-      viewMode={viewMode}
-      setViewMode={setViewMode}
-      selectedPropertyId={selectedPropertyId}
-      setSelectedPropertyId={setSelectedPropertyId}
-      expenseGrowthOverride={expenseGrowthOverride}
-      setExpenseGrowthOverride={setExpenseGrowthOverride}
-      deleteDialogOpen={deleteDialogOpen}
-      setDeleteDialogOpen={setDeleteDialogOpen}
-      propertyToDelete={propertyToDelete}
-      onDeleteClick={handleDeleteClick}
-      onConfirmDelete={confirmDelete}
-      isDemo={false}
-    />
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{propertyToDelete?.name}"? This action cannot be undone.
+              All associated data including loans, rental income, and expense logs will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
+

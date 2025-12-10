@@ -1,10 +1,10 @@
 // Complete PostgreSQL schema for Property Portfolio Analyzer
-import { 
+import {
   serial,
-  varchar, 
-  timestamp, 
-  boolean, 
-  numeric, 
+  varchar,
+  timestamp,
+  boolean,
+  numeric,
   text,
   pgEnum,
   pgTable,
@@ -43,6 +43,10 @@ export const users = pgTable("users", {
   role: roleEnum("role").default('user').notNull(),
   isActive: boolean('is_active').notNull().default(true),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  subscriptionTier: varchar("subscriptionTier", { length: 50 }).default('FREE'),
+  subscriptionStatus: varchar("subscriptionStatus", { length: 50 }).default('active'),
+  subscriptionEndDate: timestamp("subscriptionEndDate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -265,6 +269,7 @@ export const expenseBreakdown = pgTable("expense_breakdown", {
   expenseLogId: integer("expenseLogId").notNull(),
   category: varchar("category", { length: 255 }).notNull(),
   amount: integer("amount").notNull(), // in cents
+  frequency: expenseFrequencyEnum("frequency").default('Annually').notNull(),
 });
 
 export type ExpenseBreakdown = typeof expenseBreakdown.$inferSelect;

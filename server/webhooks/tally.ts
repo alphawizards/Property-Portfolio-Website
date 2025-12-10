@@ -116,6 +116,10 @@ tallyWebhookRouter.post("/tally", async (req, res) => {
 
     // Insert into database
     const db = await getDb();
+    if (!db) {
+      console.error("❌ Database connection failed");
+      return res.status(500).json({ error: "Database connection failed" });
+    }
     const result = await db
       .insert(feedback)
       .values({
@@ -150,7 +154,7 @@ tallyWebhookRouter.post("/tally", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Tally webhook error:", error);
-    
+
     // Send error details in development, generic message in production
     const isDev = process.env.NODE_ENV !== "production";
     res.status(500).json({

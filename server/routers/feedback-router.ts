@@ -37,6 +37,12 @@ export const feedbackRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
 
       const result = await db
         .insert(feedback)
@@ -80,6 +86,12 @@ export const feedbackRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
 
       const result = await db
         .insert(feedback)
@@ -110,6 +122,12 @@ export const feedbackRouter = router({
    */
   getMyFeedback: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
 
     const userFeedback = await db
       .select({
@@ -145,11 +163,17 @@ export const feedbackRouter = router({
     )
     .query(async ({ input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
       const { status, category, page, pageSize } = input;
       const offset = (page - 1) * pageSize;
 
       // Build query
-      let query = db
+      let query: any = db
         .select({
           id: feedback.id,
           userId: feedback.userId,
@@ -179,7 +203,7 @@ export const feedbackRouter = router({
       }
 
       if (conditions.length > 0) {
-        query = query.where(and(...conditions));
+        query = query.where(and(...(conditions as any[])));
       }
 
       const allFeedback = await query.orderBy(desc(feedback.createdAt)).limit(pageSize).offset(offset);
@@ -188,7 +212,7 @@ export const feedbackRouter = router({
       const totalResult = await db
         .select({ count: sql<number>`count(*)` })
         .from(feedback)
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
+        .where(conditions.length > 0 ? and(...(conditions as any[])) : undefined);
       const total = Number(totalResult[0]?.count ?? 0);
 
       return {
@@ -213,6 +237,12 @@ export const feedbackRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
 
       const updateData: any = {
         status: input.status,
@@ -238,6 +268,12 @@ export const feedbackRouter = router({
    */
   getStats: adminProcedure.query(async () => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database connection failed",
+      });
+    }
 
     // Total feedback by status
     const statusStats = await db
@@ -303,6 +339,12 @@ export const feedbackRouter = router({
     .input(z.object({ feedbackId: z.number().int() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
 
       await db.delete(feedback).where(eq(feedback.id, input.feedbackId));
 

@@ -7,7 +7,7 @@
 
 import { users, properties } from "../drizzle/schema-postgres";
 import { eq, and, count } from "drizzle-orm";
-import type { MySql2Database } from "drizzle-orm/mysql2";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ============ TYPE DEFINITIONS ============
 
@@ -98,7 +98,7 @@ export function isPremiumTier(tier: SubscriptionTier): boolean {
  * @returns PropertyLimitStatus with detailed information
  */
 export async function canAddProperty(
-  db: MySql2Database<any>,
+  db: any,
   userId: number
 ): Promise<PropertyLimitStatus> {
   // Get user's subscription tier
@@ -107,7 +107,7 @@ export async function canAddProperty(
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
 
   // Count current properties
@@ -134,7 +134,7 @@ export async function canAddProperty(
 /**
  * Get property count for user
  */
-export async function getPropertyCount(db: MySql2Database<any>, userId: number): Promise<number> {
+export async function getPropertyCount(db: any, userId: number): Promise<number> {
   const result = await db
     .select({ count: count() })
     .from(properties)
@@ -153,7 +153,7 @@ export async function getPropertyCount(db: MySql2Database<any>, userId: number):
  * @returns ForecastLimitStatus with detailed information
  */
 export async function canViewForecast(
-  db: MySql2Database<any>,
+  db: any,
   userId: number,
   requestedYears: number
 ): Promise<ForecastLimitStatus> {
@@ -162,7 +162,7 @@ export async function canViewForecast(
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
   const limit = limits.forecastYearsLimit;
   const isUnlimited = limit === -1;
@@ -182,7 +182,7 @@ export async function canViewForecast(
  * Check if user can use tax calculator
  */
 export async function canUseTaxCalculator(
-  db: MySql2Database<any>,
+  db: any,
   userId: number
 ): Promise<FeatureAccessStatus> {
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -190,7 +190,7 @@ export async function canUseTaxCalculator(
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
   const hasAccess = limits.canUseTaxCalculator;
 
@@ -206,7 +206,7 @@ export async function canUseTaxCalculator(
  * Check if user can use investment comparison
  */
 export async function canUseInvestmentComparison(
-  db: MySql2Database<any>,
+  db: any,
   userId: number
 ): Promise<FeatureAccessStatus> {
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -214,7 +214,7 @@ export async function canUseInvestmentComparison(
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
   const hasAccess = limits.canUseInvestmentComparison;
 
@@ -230,7 +230,7 @@ export async function canUseInvestmentComparison(
  * Check if user can export reports
  */
 export async function canExportReports(
-  db: MySql2Database<any>,
+  db: any,
   userId: number
 ): Promise<FeatureAccessStatus> {
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -238,7 +238,7 @@ export async function canExportReports(
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
   const hasAccess = limits.canExportReports;
 
@@ -254,7 +254,7 @@ export async function canExportReports(
  * Check if user can use advanced analytics
  */
 export async function canUseAdvancedAnalytics(
-  db: MySql2Database<any>,
+  db: any,
   userId: number
 ): Promise<FeatureAccessStatus> {
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -262,7 +262,7 @@ export async function canUseAdvancedAnalytics(
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
   const hasAccess = limits.canUseAdvancedAnalytics;
 
@@ -279,13 +279,13 @@ export async function canUseAdvancedAnalytics(
 /**
  * Get all feature access for a user (useful for UI rendering)
  */
-export async function getAllFeatureAccess(db: MySql2Database<any>, userId: number) {
+export async function getAllFeatureAccess(db: any, userId: number) {
   const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user.length) {
     throw new Error("User not found");
   }
 
-  const tier = user[0].subscriptionTier;
+  const tier = (user[0].subscriptionTier as SubscriptionTier) || "FREE";
   const limits = getTierLimits(tier);
   const propertyStatus = await canAddProperty(db, userId);
 

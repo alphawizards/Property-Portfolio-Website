@@ -477,7 +477,7 @@ export async function getExpenseBreakdown(expenseLogId: number) {
  * @param frequency Payment frequency
  * @returns Weekly amount in cents
  */
-export function convertToWeeklyExpense(amount: number, frequency: "Weekly" | "Monthly" | "Quarterly" | "Annually"): number {
+export function convertToWeeklyExpense(amount: number, frequency: "Weekly" | "Monthly" | "Quarterly" | "Annually" | "Annual" | "OneTime"): number {
   switch (frequency) {
     case "Weekly":
       return amount;
@@ -486,7 +486,10 @@ export function convertToWeeklyExpense(amount: number, frequency: "Weekly" | "Mo
     case "Quarterly":
       return Math.round(amount / 13); // 13 weeks per quarter
     case "Annually":
+    case "Annual":
       return Math.round(amount / 52); // 52 weeks per year
+    case "OneTime":
+      return 0; // One-time expenses don't have a weekly equivalent for cashflow
     default:
       return amount;
   }
@@ -819,13 +822,13 @@ export async function clonePortfolioToScenario(portfolioId: number, userId: numb
         const { id, ...valData } = val;
         await tx.insert(propertyValuations).values({ ...valData, propertyId: newPropId });
       }
-      
+
       // Clone Ownership
       const ownershipList = await tx.select().from(propertyOwnership).where(eq(propertyOwnership.propertyId, oldId));
       if (ownershipList.length > 0) {
-          const newOwnership = ownershipList.map(({ id, propertyId, ...rest }) => ({ ...rest, propertyId: newPropId }));
-          // Insert all ownerships in batch
-          await tx.insert(propertyOwnership).values(newOwnership);
+        const newOwnership = ownershipList.map(({ id, propertyId, ...rest }) => ({ ...rest, propertyId: newPropId }));
+        // Insert all ownerships in batch
+        await tx.insert(propertyOwnership).values(newOwnership);
       }
     }
 
