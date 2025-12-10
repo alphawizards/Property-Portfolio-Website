@@ -9,13 +9,14 @@ export default function DemoLoginPage() {
     const [, setLocation] = useLocation();
     const devLogin = trpc.auth.devLogin.useMutation();
 
-    const handleLogin = async (tier: "FREE" | "PREMIUM_MONTHLY" | "PREMIUM_ANNUAL", role: "user" | "admin" = "user") => {
+    const handleLogin = async (tier: "FREE" | "PREMIUM_MONTHLY" | "PREMIUM_ANNUAL", role: "user" | "admin" = "user", specificEmail?: string) => {
         try {
+            const email = specificEmail || `demo-${role}-${tier.toLowerCase()}@example.com`;
             const result = await devLogin.mutateAsync({
                 tier,
                 role,
-                email: `demo-${role}-${tier.toLowerCase()}@example.com`,
-                name: `Demo ${role.charAt(0).toUpperCase() + role.slice(1)} (${tier.replace("_", " ")})`,
+                email,
+                name: specificEmail ? `New User (${specificEmail.split('@')[0].split('-')[2]})` : `Demo ${role.charAt(0).toUpperCase() + role.slice(1)} (${tier.replace("_", " ")})`,
             });
 
             if (result.success) {
@@ -50,13 +51,31 @@ export default function DemoLoginPage() {
                         <h3 className="text-sm font-medium text-gray-500">Regular Users</h3>
                         <Button
                             variant="outline"
+                            className="w-full justify-start h-12 bg-green-50 hover:bg-green-100 border-green-200"
+                            onClick={() => {
+                                const randomId = Math.floor(Math.random() * 10000);
+                                handleLogin("FREE", "user", `new-user-${randomId}@example.com`);
+                            }}
+                            disabled={devLogin.isPending}
+                        >
+                            <User className="w-5 h-5 mr-3 text-green-600" />
+                            <div className="text-left">
+                                <div className="font-medium text-gray-900">New Random User</div>
+                                <div className="text-xs text-gray-500">Fresh account (no history)</div>
+                            </div>
+                        </Button>
+
+                        <div className="h-2" />
+
+                        <Button
+                            variant="outline"
                             className="w-full justify-start h-12"
                             onClick={() => handleLogin("FREE")}
                             disabled={devLogin.isPending}
                         >
                             <User className="w-5 h-5 mr-3 text-gray-500" />
                             <div className="text-left">
-                                <div className="font-medium text-gray-900">Free User</div>
+                                <div className="font-medium text-gray-900">Existing Free User</div>
                                 <div className="text-xs text-gray-500">Standard access limits</div>
                             </div>
                         </Button>
