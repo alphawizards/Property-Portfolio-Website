@@ -121,7 +121,7 @@ tallyWebhookRouter.post("/tally", async (req, res) => {
     //   console.error("❌ Database connection failed");
     //   return res.status(500).json({ error: "Database connection failed" });
     // }
-    const result = await db
+    const [result] = await db
       .insert(feedback)
       .values({
         userId: null, // anonymous submission
@@ -136,9 +136,10 @@ tallyWebhookRouter.post("/tally", async (req, res) => {
         metadata: metadata,
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+      })
+      .returning({ id: feedback.id });
 
-    const feedbackId = Number(result.insertId);
+    const feedbackId = Number(result.id);
 
     console.log(`✅ Feedback saved successfully! ID: ${feedbackId}`);
     console.log(`   Category: ${category}`);
