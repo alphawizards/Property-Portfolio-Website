@@ -10,6 +10,10 @@ import Comparison from "@/pages/Comparison";
 import Subscription from "@/pages/Subscription";
 import PropertyAnalysis from "@/pages/PropertyAnalysis";
 import AdminDashboard from "@/pages/AdminDashboard";
+import LandingPage from "@/pages/LandingPage";
+import DemoDashboard from "@/pages/DemoDashboard";
+import MortgageCalculator from "@/pages/tools/MortgageCalculator";
+import PayCalculator from "@/pages/tools/PayCalculator";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -44,7 +48,7 @@ function Router() {
       <Route path="/properties/new" component={AddPropertyExtended} />
       <Route path="/properties/wizard">
         {() => (
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader /></div>}>
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
             <PropertyWizard />
           </Suspense>
         )}
@@ -55,7 +59,7 @@ function Router() {
       <Route path="/subscription" component={Subscription} />
       <Route path="/dashboard/premium">
         {() => (
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader /></div>}>
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
             <PremiumDashboard />
           </Suspense>
         )}
