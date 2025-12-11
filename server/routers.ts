@@ -10,6 +10,7 @@ import { subscriptionRouter } from "./subscription-router";
 import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
+import { authRouter } from "./routers/auth-router";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -126,6 +127,7 @@ export const appRouter = router({
   featureGates: featureGatesRouter,
   admin: adminRouter,
   feedback: feedbackRouter,
+  auth: authRouter,
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({
     list: protectedProcedure.query(async ({ ctx }) => {
