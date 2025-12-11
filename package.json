@@ -14,7 +14,8 @@
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "seed:test": "tsx seed-test-data.mjs",
-    "seed:golden": "tsx seed-golden-master.mjs"
+    "seed:golden": "tsx seed-golden-master.mjs",
+    "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -114,7 +115,7 @@
     "tsx": "^4.19.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "5.9.3",
-    "vite": "^7.1.7",
+    "vite": "^5.4.21",
     "vite-plugin-manus-runtime": "^0.0.56",
     "vitest": "^2.1.4"
   },

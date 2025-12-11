@@ -32,6 +32,7 @@ const propertySchema = z.object({
   saleDate: z.date().optional(),
   salePrice: z.number().int().positive().optional(),
   status: z.enum(["Actual", "Projected"]),
+  scenarioId: z.number().int().optional(),
 });
 
 const propertyOwnershipSchema = z.object({
