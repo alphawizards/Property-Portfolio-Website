@@ -33,7 +33,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Properties", path: "/properties" },
   { icon: GitBranch, label: "Comparison", path: "/comparison" },
 ];

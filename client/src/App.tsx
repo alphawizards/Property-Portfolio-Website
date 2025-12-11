@@ -20,6 +20,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ScenarioProvider } from "./contexts/ScenarioContext";
 import { NarrativeLoader } from "./components/ui/NarrativeLoader";
 import { FeedbackWidget } from "./components/FeedbackWidget";
+import DashboardLayout from "@/components/DashboardLayout";
 
 // Lazy load Premium features
 const PremiumDashboard = lazy(() => import("@/pages/PremiumDashboard").then(m => ({ default: m.PremiumDashboard })));
@@ -30,7 +31,9 @@ function PrivateRoute({ component: Component }: { component: React.ComponentType
   return (
     <>
       <SignedIn>
-        <Component />
+        <DashboardLayout>
+          <Component />
+        </DashboardLayout>
       </SignedIn>
       <SignedOut>
         <RedirectToSignIn />
@@ -44,12 +47,16 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/" component={LandingPage} />
-      <Route path="/tools/mortgage-calculator" component={MortgageCalculator} />
-      <Route path="/tools/pay-calculator" component={PayCalculator} />
 
       {/* Protected Routes (Replaced AuthGuard with Clerk) */}
       <Route path="/dashboard">
         <PrivateRoute component={Dashboard} />
+      </Route>
+      <Route path="/tools/mortgage-calculator">
+        <PrivateRoute component={MortgageCalculator} />
+      </Route>
+      <Route path="/tools/pay-calculator">
+        <PrivateRoute component={PayCalculator} />
       </Route>
       <Route path="/admin">
         <PrivateRoute component={AdminDashboard} />
@@ -62,9 +69,11 @@ function Router() {
       </Route>
       <Route path="/properties/wizard">
         <SignedIn>
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
-            <PropertyWizard />
-          </Suspense>
+          <DashboardLayout>
+            <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
+              <PropertyWizard />
+            </Suspense>
+          </DashboardLayout>
         </SignedIn>
         <SignedOut>
           <RedirectToSignIn />
@@ -73,14 +82,18 @@ function Router() {
       <Route path="/properties/:id">
         {(params) => (
           <SignedIn>
-            <PropertyDetailEnhanced />
+            <DashboardLayout>
+              <PropertyDetailEnhanced />
+            </DashboardLayout>
           </SignedIn>
         )}
       </Route>
       <Route path="/properties/:id/analysis">
         {(params) => (
           <SignedIn>
-            <PropertyAnalysis />
+            <DashboardLayout>
+              <PropertyAnalysis />
+            </DashboardLayout>
           </SignedIn>
         )}
       </Route>
@@ -92,9 +105,11 @@ function Router() {
       </Route>
       <Route path="/dashboard/premium">
         <SignedIn>
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
-            <PremiumDashboard />
-          </Suspense>
+          <DashboardLayout>
+            <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><NarrativeLoader isLoading={true} /></div>}>
+              <PremiumDashboard />
+            </Suspense>
+          </DashboardLayout>
         </SignedIn>
         <SignedOut>
           <RedirectToSignIn />
