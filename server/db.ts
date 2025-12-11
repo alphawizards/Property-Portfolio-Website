@@ -40,19 +40,33 @@ import {
   InsertScenario,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env"; // We will create this
+import * as mock from "./mock-data";
 
 // Global connection cache for serverless environments
 const globalForDb = globalThis as unknown as { conn: ReturnType<typeof drizzle> };
 
 // SSL is required for PlanetScale Postgres
-const client = postgres(process.env.DATABASE_URL!, { ssl: 'require', prepare: false });
+// Mock DB Connection if ENABLE_MOCK_DATA is true to prevent connection errors
+const connectionString = process.env.ENABLE_MOCK_DATA === "true"
+  ? "postgres://mock:mock@localhost:5432/mock"
+  : process.env.DATABASE_URL!;
+
+const client = postgres(connectionString, {
+  ssl: process.env.ENABLE_MOCK_DATA === "true" ? false : 'require',
+  prepare: false
+});
 export const db = globalForDb.conn ?? drizzle(client, { schema });
 
 if (process.env.NODE_ENV !== "production") globalForDb.conn = db;
 
+// Helper to check if mock mode is active
+const isMock = () => process.env.ENABLE_MOCK_DATA === "true";
+
 // ============ USER OPERATIONS ============
 
 export async function upsertUser(user: InsertUser): Promise<void> {
+  if (isMock()) return; // No-op in mock mode
+
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
@@ -92,6 +106,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
+  if (isMock()) return mock.mockUser;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -99,39 +114,54 @@ export async function getUserByOpenId(openId: string) {
 // ============ PORTFOLIO OPERATIONS ============
 
 export async function createPortfolio(portfolio: InsertPortfolio) {
+  if (isMock()) return 1;
   const result = await db.insert(portfolios).values(portfolio).returning({ id: portfolios.id });
   return Number(result[0].id);
 }
 
 export async function getPortfoliosByUserId(userId: number) {
+  if (isMock()) return mock.mockPortfolios;
   return await db.select().from(portfolios).where(eq(portfolios.userId, userId));
 }
 
 export async function getPortfolioById(id: number) {
+  if (isMock()) return mock.mockPortfolios.find(p => p.id === id) || null;
   const results = await db.select().from(portfolios).where(eq(portfolios.id, id));
   return results[0] || null;
 }
 
 export async function updatePortfolio(id: number, data: Partial<InsertPortfolio>) {
+  if (isMock()) return;
   await db.update(portfolios).set(data).where(eq(portfolios.id, id));
 }
 
 export async function deletePortfolio(id: number) {
+  if (isMock()) return;
   await db.delete(portfolios).where(eq(portfolios.id, id));
 }
 
 export async function getPropertiesByPortfolioId(portfolioId: number) {
+  if (isMock()) return mock.mockProperties.filter(p => p.portfolioId === portfolioId);
   return await db.select().from(properties).where(eq(properties.portfolioId, portfolioId));
 }
 
 // ============ PROPERTY OPERATIONS ============
 
 export async function createProperty(property: InsertProperty) {
+  if (isMock()) return 999; // Mock ID
   const result = await db.insert(properties).values(property).returning({ id: properties.id });
   return Number(result[0].id);
 }
 
 export async function getPropertiesByUserId(userId: number, scenarioId?: number | null) {
+  if (isMock()) {
+    return mock.mockProperties.filter(p => {
+      // Basic mock filtering
+      if (scenarioId === null && p.scenarioId !== null) return false;
+      if (scenarioId !== undefined && scenarioId !== null && p.scenarioId !== scenarioId) return false;
+      return true;
+    });
+  }
   const conditions = [eq(properties.userId, userId)];
 
   if (scenarioId === null) {
@@ -144,15 +174,18 @@ export async function getPropertiesByUserId(userId: number, scenarioId?: number 
 }
 
 export async function getPropertyById(propertyId: number) {
+  if (isMock()) return mock.mockProperties.find(p => p.id === propertyId);
   const result = await db.select().from(properties).where(eq(properties.id, propertyId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function updateProperty(propertyId: number, updates: Partial<InsertProperty>) {
+  if (isMock()) return;
   await db.update(properties).set(updates).where(eq(properties.id, propertyId));
 }
 
 export async function deleteProperty(propertyId: number) {
+  if (isMock()) return;
   // Cascading deletes are handled by Foreign Keys in Postgres schema (onDelete: 'cascade')
   // But strictly speaking we can explicitly delete if we want to be safe, 
   // or just rely on the DB. The schema defines REFERENCES ... ON DELETE CASCADE.
@@ -163,6 +196,7 @@ export async function deleteProperty(propertyId: number) {
 // ============ PROPERTY OWNERSHIP OPERATIONS ============
 
 export async function setPropertyOwnership(propertyId: number, owners: InsertPropertyOwnership[]) {
+  if (isMock()) return;
   // Delete existing ownership records
   await db.delete(propertyOwnership).where(eq(propertyOwnership.propertyId, propertyId));
 
@@ -173,12 +207,14 @@ export async function setPropertyOwnership(propertyId: number, owners: InsertPro
 }
 
 export async function getPropertyOwnership(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.ownership || [];
   return await db.select().from(propertyOwnership).where(eq(propertyOwnership.propertyId, propertyId));
 }
 
 // ============ PURCHASE COSTS OPERATIONS ============
 
 export async function upsertPurchaseCosts(costs: InsertPurchaseCosts) {
+  if (isMock()) return;
   await db
     .insert(purchaseCosts)
     .values(costs)
@@ -195,6 +231,7 @@ export async function upsertPurchaseCosts(costs: InsertPurchaseCosts) {
 }
 
 export async function getPurchaseCosts(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.costs || null;
   const result = await db.select().from(purchaseCosts).where(eq(purchaseCosts.propertyId, propertyId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -202,103 +239,124 @@ export async function getPurchaseCosts(propertyId: number) {
 // ============ PROPERTY USAGE PERIODS OPERATIONS ============
 
 export async function addPropertyUsagePeriod(period: InsertPropertyUsagePeriod) {
+  if (isMock()) return 999;
   const result = await db.insert(propertyUsagePeriods).values(period).returning({ id: propertyUsagePeriods.id });
   return Number(result[0].id);
 }
 
 export async function getPropertyUsagePeriods(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.usagePeriods || [];
   return await db.select().from(propertyUsagePeriods).where(eq(propertyUsagePeriods.propertyId, propertyId)).orderBy(asc(propertyUsagePeriods.startDate));
 }
 
 export async function deletePropertyUsagePeriod(periodId: number) {
+  if (isMock()) return;
   await db.delete(propertyUsagePeriods).where(eq(propertyUsagePeriods.id, periodId));
 }
 
 // ============ LOAN OPERATIONS ============
 
 export async function createLoan(loan: InsertLoan) {
+  if (isMock()) return 999;
   const result = await db.insert(loans).values(loan).returning({ id: loans.id });
   return Number(result[0].id);
 }
 
 export async function getPropertyLoans(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.loans || [];
   return await db.select().from(loans).where(eq(loans.propertyId, propertyId)).orderBy(desc(loans.createdAt));
 }
 
 export async function getLoanById(loanId: number) {
+  // Simplification for mock
   const result = await db.select().from(loans).where(eq(loans.id, loanId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function updateLoan(loanId: number, updates: Partial<InsertLoan>) {
+  if (isMock()) return;
   await db.update(loans).set(updates).where(eq(loans.id, loanId));
 }
 
 export async function deleteLoan(loanId: number) {
+  if (isMock()) return;
   await db.delete(loans).where(eq(loans.id, loanId));
 }
 
 // ============ PROPERTY VALUATION OPERATIONS ============
 
 export async function addPropertyValuation(valuation: InsertPropertyValuation) {
+  if (isMock()) return 999;
   const result = await db.insert(propertyValuations).values(valuation).returning({ id: propertyValuations.id });
   return Number(result[0].id);
 }
 
 export async function getPropertyValuations(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.valuations || [];
   return await db.select().from(propertyValuations).where(eq(propertyValuations.propertyId, propertyId)).orderBy(desc(propertyValuations.valuationDate));
 }
 
 export async function deletePropertyValuation(valuationId: number) {
+  if (isMock()) return;
   await db.delete(propertyValuations).where(eq(propertyValuations.id, valuationId));
 }
 
 // ============ GROWTH RATE PERIODS OPERATIONS ============
 
 export async function addGrowthRatePeriod(period: InsertGrowthRatePeriod) {
+  if (isMock()) return 999;
   const result = await db.insert(growthRatePeriods).values(period).returning({ id: growthRatePeriods.id });
   return Number(result[0].id);
 }
 
 export async function getGrowthRatePeriods(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.growthRates || [];
   return await db.select().from(growthRatePeriods).where(eq(growthRatePeriods.propertyId, propertyId)).orderBy(asc(growthRatePeriods.startYear));
 }
 
 export async function deleteGrowthRatePeriod(periodId: number) {
+  if (isMock()) return;
   await db.delete(growthRatePeriods).where(eq(growthRatePeriods.id, periodId));
 }
 
 // ============ RENTAL INCOME OPERATIONS ============
 
 export async function addRentalIncome(income: InsertRentalIncome) {
+  if (isMock()) return 999;
   const result = await db.insert(rentalIncome).values(income).returning({ id: rentalIncome.id });
   return Number(result[0].id);
 }
 
 export async function getRentalIncome(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.rental || [];
   return await db.select().from(rentalIncome).where(eq(rentalIncome.propertyId, propertyId)).orderBy(desc(rentalIncome.startDate));
 }
 
 export async function updateRentalIncome(incomeId: number, updates: Partial<InsertRentalIncome>) {
+  if (isMock()) return;
   await db.update(rentalIncome).set(updates).where(eq(rentalIncome.id, incomeId));
 }
 
 export async function deleteRentalIncome(incomeId: number) {
+  if (isMock()) return;
   await db.delete(rentalIncome).where(eq(rentalIncome.id, incomeId));
 }
 
 // ============ EXPENSE OPERATIONS ============
 
 export async function createExpenseLog(expense: InsertExpenseLog) {
+  if (isMock()) return 999;
   const result = await db.insert(expenseLogs).values(expense).returning({ id: expenseLogs.id });
   return Number(result[0].id);
 }
 
 export async function getExpenseLogs(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.expenses || [];
   return await db.select().from(expenseLogs).where(eq(expenseLogs.propertyId, propertyId)).orderBy(desc(expenseLogs.date));
 }
 
 export async function deleteExpenseLog(expenseId: number) {
+  if (isMock()) return;
   // Check if CASCADE is set on expenseBreakdown, if so, this is just one call.
   // Schema says: references(() => expenseLogs.id, { onDelete: 'cascade' })
   // So we just delete the log.
@@ -306,11 +364,14 @@ export async function deleteExpenseLog(expenseId: number) {
 }
 
 export async function addExpenseBreakdown(breakdown: InsertExpenseBreakdown) {
+  if (isMock()) return 999;
   const result = await db.insert(expenseBreakdown).values(breakdown).returning({ id: expenseBreakdown.id });
   return Number(result[0].id);
 }
 
 export async function getExpenseBreakdown(expenseLogId: number) {
+  // This might be tricky to mock accurately without state, returning empty for now or generic
+  if (isMock()) return [];
   return await db.select().from(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseLogId));
 }
 
@@ -350,51 +411,62 @@ export function calculateWeeklyExpenses(breakdown: any[]): number {
 }
 
 export async function getExpenseLogById(expenseId: number) {
+  // Mock simplification
+  if (isMock()) return null;
   const results = await db.select().from(expenseLogs).where(eq(expenseLogs.id, expenseId));
   return results[0] || null;
 }
 
 export async function updateExpenseLog(expenseId: number, data: Partial<InsertExpenseLog>) {
+  if (isMock()) return;
   await db.update(expenseLogs).set(data).where(eq(expenseLogs.id, expenseId));
 }
 
 export async function deleteExpenseBreakdownByLogId(expenseLogId: number) {
+  if (isMock()) return;
   await db.delete(expenseBreakdown).where(eq(expenseBreakdown.expenseLogId, expenseLogId));
 }
 
 // ============ DEPRECIATION SCHEDULE OPERATIONS ============
 
 export async function addDepreciationSchedule(schedule: InsertDepreciationSchedule) {
+  if (isMock()) return 999;
   const result = await db.insert(depreciationSchedule).values(schedule).returning({ id: depreciationSchedule.id });
   return Number(result[0].id);
 }
 
 export async function getDepreciationSchedule(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.depreciation || [];
   return await db.select().from(depreciationSchedule).where(eq(depreciationSchedule.propertyId, propertyId)).orderBy(desc(depreciationSchedule.asAtDate));
 }
 
 export async function deleteDepreciationSchedule(scheduleId: number) {
+  if (isMock()) return;
   await db.delete(depreciationSchedule).where(eq(depreciationSchedule.id, scheduleId));
 }
 
 // ============ CAPITAL EXPENDITURE OPERATIONS ============
 
 export async function addCapitalExpenditure(capex: InsertCapitalExpenditure) {
+  if (isMock()) return 999;
   const result = await db.insert(capitalExpenditure).values(capex).returning({ id: capitalExpenditure.id });
   return Number(result[0].id);
 }
 
 export async function getCapitalExpenditure(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId)?.capex || [];
   return await db.select().from(capitalExpenditure).where(eq(capitalExpenditure.propertyId, propertyId)).orderBy(desc(capitalExpenditure.date));
 }
 
 export async function deleteCapitalExpenditure(capexId: number) {
+  if (isMock()) return;
   await db.delete(capitalExpenditure).where(eq(capitalExpenditure.id, capexId));
 }
 
 // ============ PORTFOLIO GOALS OPERATIONS ============
 
 export async function upsertPortfolioGoal(goal: InsertPortfolioGoal) {
+  if (isMock()) return;
   await db
     .insert(portfolioGoals)
     .values(goal)
@@ -409,6 +481,7 @@ export async function upsertPortfolioGoal(goal: InsertPortfolioGoal) {
 }
 
 export async function getPortfolioGoal(userId: number) {
+  if (isMock()) return mock.mockGoal;
   const result = await db.select().from(portfolioGoals).where(eq(portfolioGoals.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
@@ -416,6 +489,7 @@ export async function getPortfolioGoal(userId: number) {
 // ============ COMPLEX QUERIES FOR PORTFOLIO ANALYSIS ============
 
 export async function getCompletePropertyData(propertyId: number) {
+  if (isMock()) return mock.getMockCompleteData(propertyId);
   const property = await getPropertyById(propertyId);
   if (!property) return null;
 
@@ -472,6 +546,7 @@ export async function updateUserSubscription(
     subscriptionEndDate?: Date | null;
   }
 ) {
+  if (isMock()) return;
   const updateData: any = {};
   if (data.subscriptionTier !== undefined) updateData.subscriptionTier = data.subscriptionTier;
   if (data.stripeCustomerId !== undefined) updateData.stripeCustomerId = data.stripeCustomerId;
@@ -483,11 +558,13 @@ export async function updateUserSubscription(
 }
 
 export async function getUserByStripeSubscriptionId(subscriptionId: string) {
+  if (isMock()) return undefined;
   const result = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getUserSubscriptionInfo(userId: number) {
+  if (isMock()) return mock.mockUser;
   const result = await db
     .select({
       subscriptionTier: users.subscriptionTier,
@@ -516,11 +593,13 @@ export async function getPropertyExpenses(propertyId: number) {
 // ============ LOAN SCENARIOS OPERATIONS ============
 
 export async function saveLoanScenario(scenario: InsertLoanScenario) {
+  if (isMock()) return 999;
   const result = await db.insert(loanScenarios).values(scenario).returning({ id: loanScenarios.id });
   return Number(result[0].id);
 }
 
 export async function getLoanScenariosByProperty(propertyId: number) {
+  if (isMock()) return [];
   return await db
     .select()
     .from(loanScenarios)
@@ -529,26 +608,31 @@ export async function getLoanScenariosByProperty(propertyId: number) {
 }
 
 export async function getLoanScenarioById(id: number) {
+  if (isMock()) return undefined;
   const result = await db.select().from(loanScenarios).where(eq(loanScenarios.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
 export async function deleteLoanScenario(id: number) {
+  if (isMock()) return;
   await db.delete(loanScenarios).where(eq(loanScenarios.id, id));
 }
 
 // ============ SCENARIO OPERATIONS ============
 
 export async function getScenariosByUserId(userId: number) {
+  if (isMock()) return [];
   return await db.select().from(scenarios).where(eq(scenarios.userId, userId)).orderBy(desc(scenarios.createdAt));
 }
 
 export async function createScenario(scenario: InsertScenario) {
+  if (isMock()) return 999;
   const result = await db.insert(scenarios).values(scenario).returning({ id: scenarios.id });
   return Number(result[0].id);
 }
 
 export async function clonePortfolioToScenario(portfolioId: number, userId: number, scenarioName: string) {
+  if (isMock()) return 999;
   return await db.transaction(async (tx) => {
     // 1. Create Scenario
     const [scenario] = await tx.insert(scenarios).values({
