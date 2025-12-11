@@ -47,19 +47,24 @@ const _env = envSchema.safeParse(process.env);
 
 if (!_env.success) {
   console.error("❌ Invalid environment variables:", JSON.stringify(_env.error.format(), null, 4));
-  process.exit(1);
+  if (process.env.NODE_ENV !== "test") {
+    process.exit(1);
+  }
 }
 
+// In test mode, allow partial data or empty object if validation failed
+const envData = _env.success ? _env.data : ({} as z.infer<typeof envSchema>);
+
 export const ENV = {
-  ..._env.data,
-  ownerOpenId: _env.data.OWNER_OPENID,
+  ...envData,
+  ownerOpenId: envData.OWNER_OPENID,
 
   // Storage mappings
-  forgeApiUrl: _env.data.BUILT_IN_FORGE_API_URL,
-  forgeApiKey: _env.data.BUILT_IN_FORGE_API_KEY,
+  forgeApiUrl: envData.BUILT_IN_FORGE_API_URL,
+  forgeApiKey: envData.BUILT_IN_FORGE_API_KEY,
 
   // Platform/OAuth mappings
-  oAuthServerUrl: _env.data.OAUTH_SERVER_URL,
-  appId: _env.data.APP_ID,
-  cookieSecret: _env.data.COOKIE_SECRET || "development_secret_key_123",
+  oAuthServerUrl: envData.OAUTH_SERVER_URL,
+  appId: envData.APP_ID,
+  cookieSecret: envData.COOKIE_SECRET || "development_secret_key_123",
 };

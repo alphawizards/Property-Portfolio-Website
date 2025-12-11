@@ -4,16 +4,39 @@ import type { User } from "../../drizzle/schema";
 import { sessions, users } from "@clerk/clerk-sdk-node";
 import * as db from "../db";
 
+// Common context interface
 export type TrpcContext = {
-  req: CreateExpressContextOptions["req"];
-  res: CreateExpressContextOptions["res"];
+  req: CreateExpressContextOptions["req"] | Request;
+  res?: CreateExpressContextOptions["res"];
   user: any | null;
 };
 
-export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
-  const { req, res } = opts;
-  let user = null;
+// Logic to extract token from various request types
+function getToken(req: any): string | undefined {
+  // 1. Authorization Header
+  const authHeader = req.headers.authorization || req.headers.get?.("authorization");
+  if (authHeader && typeof authHeader === 'string') {
+    return authHeader.replace('Bearer ', '');
+  }
 
+  // 2. Cookie
+  // Express: req.cookies.__session
+  if (req.cookies && req.cookies.__session) {
+    return req.cookies.__session;
+  }
+
+  // Standard Request: parse Cookie header
+  const cookieHeader = req.headers.cookie || req.headers.get?.("cookie");
+  if (cookieHeader && typeof cookieHeader === 'string') {
+    const match = cookieHeader.match(/__session=([^;]+)/);
+    return match ? match[1] : undefined;
+  }
+
+  return undefined;
+}
+
+async function getUserFromRequest(req: any) {
+  let user = null;
   try {
     // 1. Check for Clerk Token in Authorization header or Cookie
     // Clerk usually sends "Authorization: Bearer <token>"
@@ -44,16 +67,41 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
           user = await db.getUserByOpenId(session.userId);
         }
       }
+    } else if (process.env.NODE_ENV === "test" || process.env.ENABLE_MOCK_AUTH === "true") {
+      // Mock Auth for Testing/Dev
+      const mockOpenId = "user_mock_123";
+      let dbUser = await db.getUserByOpenId(mockOpenId);
+
+      if (!dbUser) {
+        await db.upsertUser({
+          openId: mockOpenId,
+          email: "mock@example.com",
+          name: "Mock User",
+          role: "user",
+          loginMethod: "mock",
+        });
+        dbUser = await db.getUserByOpenId(mockOpenId);
+      }
+      user = dbUser;
     }
   } catch (err) {
     console.error("Auth verification failed:", err);
   }
+  return user;
+}
 
-  return {
-    req,
-    res,
-    user,
-  };
+// For Express (Node)
+export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
+  const { req, res } = opts;
+  const user = await getUserFromRequest(req);
+  return { req, res, user };
+}
+
+// For Fetch (Vercel Edge/Serverless)
+export async function createFetchContext(opts: FetchCreateContextFnOptions): Promise<TrpcContext> {
+  const { req, resHeaders } = opts;
+  const user = await getUserFromRequest(req);
+  return { req, user };
 }
 
 export async function createFetchContext(opts: FetchCreateContextFnOptions): Promise<TrpcContext> {

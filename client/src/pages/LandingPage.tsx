@@ -52,16 +52,16 @@ export default function LandingPage() {
                                 Now in Public Beta
                             </div>
                             <h1 className="font-heading text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight">
-                                Master Your Property <br className="hidden sm:inline" />
-                                <span className="text-primary">Investment Portfolio</span>
+                                Command Your Wealth. <br className="hidden sm:inline" />
+                                <span className="text-primary">Beyond Spreadsheets.</span>
                             </h1>
                             <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-                                Professional-grade analytics for serious property investors. Track equity, cashflow, and tax benefits in one beautiful dashboard.
+                                Your portfolio has outgrown manual errors and fragile formulas. Experience professional-grade analytics designed for sophisticated investors who demand clarity.
                             </p>
                             <div className="space-x-4">
                                 <SignUpButton mode="modal">
                                     <Button size="lg" className="gap-2">
-                                        Start for Free <ArrowRight className="h-4 w-4" />
+                                        Request Priority Access <ArrowRight className="h-4 w-4" />
                                     </Button>
                                 </SignUpButton>
                             </div>

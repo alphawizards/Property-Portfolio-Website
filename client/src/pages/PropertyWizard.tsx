@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Sparkles, ArrowRight, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useScenario } from "@/contexts/ScenarioContext";
+import { Badge } from "@/components/ui/badge";
 
 // Validation Schema
 const propertySchema = z.object({
@@ -54,7 +56,13 @@ function useSmartDefaults(address: string, setValue: any) {
 
 export function PropertyWizard() {
   const [, setLocation] = useLocation();
+  const { currentScenarioId } = useScenario();
   const utils = trpc.useUtils();
+
+  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const currentScenarioName = currentScenarioId
+    ? scenarios?.find(s => s.id === currentScenarioId)?.name
+    : null;
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
@@ -76,7 +84,7 @@ export function PropertyWizard() {
 
   const createPropertyMutation = trpc.properties.create.useMutation({
     onSuccess: () => {
-      toast.success("Property added successfully!");
+      toast.success(currentScenarioId ? "Hypothetical property added!" : "Property added successfully!");
       utils.properties.list.invalidate();
       setLocation("/");
     },
@@ -100,7 +108,8 @@ export function PropertyWizard() {
       purchaseDate: new Date(),
       state: "Unknown", // Would be parsed from address in real app
       suburb: "Unknown",
-      status: "Actual",
+      status: currentScenarioId ? "Projected" : "Actual",
+      scenarioId: currentScenarioId ?? undefined,
     });
   };
 
@@ -111,6 +120,11 @@ export function PropertyWizard() {
           <Sparkles className="w-8 h-8 text-primary" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Add New Property</h1>
+        {currentScenarioId && (
+          <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 mb-2">
+            Adding to Scenario: {currentScenarioName}
+          </Badge>
+        )}
         <p className="text-muted-foreground">
           Enter the address and we'll estimate the key metrics for you.
         </p>

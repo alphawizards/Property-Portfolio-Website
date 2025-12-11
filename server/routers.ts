@@ -10,6 +10,7 @@ import { subscriptionRouter } from "./subscription-router";
 import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
+import { authRouter } from "./routers/auth-router";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -32,6 +33,7 @@ const propertySchema = z.object({
   saleDate: z.date().optional(),
   salePrice: z.number().int().positive().optional(),
   status: z.enum(["Actual", "Projected"]),
+  scenarioId: z.number().int().optional(),
 });
 
 const propertyOwnershipSchema = z.object({
@@ -125,6 +127,7 @@ export const appRouter = router({
   featureGates: featureGatesRouter,
   admin: adminRouter,
   feedback: feedbackRouter,
+  auth: authRouter,
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({
     list: protectedProcedure.query(async ({ ctx }) => {
