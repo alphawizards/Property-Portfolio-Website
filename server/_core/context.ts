@@ -47,6 +47,22 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
           user = await db.getUserByOpenId(session.userId);
         }
       }
+    } else if (process.env.NODE_ENV === "test" || process.env.ENABLE_MOCK_AUTH === "true") {
+      // Mock Auth for Testing/Dev
+      const mockOpenId = "user_mock_123";
+      let dbUser = await db.getUserByOpenId(mockOpenId);
+
+      if (!dbUser) {
+        await db.upsertUser({
+          openId: mockOpenId,
+          email: "mock@example.com",
+          name: "Mock User",
+          role: "user",
+          loginMethod: "mock",
+        });
+        dbUser = await db.getUserByOpenId(mockOpenId);
+      }
+      user = dbUser;
     }
   } catch (err) {
     console.error("Auth verification failed:", err);
