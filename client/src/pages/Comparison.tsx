@@ -1,21 +1,30 @@
 import { useScenario } from "@/contexts/ScenarioContext";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowRight, TrendingUp, DollarSign, Building2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { formatCurrency } from "@/lib/utils";
 
 export default function Comparison() {
   const { currentScenarioId } = useScenario();
   const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const currentYear = new Date().getFullYear();
+  const projectionYears = 30;
 
-  // Fetch Live Data (scenarioId = null)
-  const { data: liveData, isLoading: isLiveLoading } = trpc.portfolios.getDashboard.useQuery({
-    scenarioId: undefined,
+  // Fetch Live Projections
+  const { data: liveProjections, isLoading: isLiveLoading } = trpc.calculations.portfolioProjections.useQuery({
+    startYear: currentYear,
+    endYear: currentYear + projectionYears,
+    scenarioId: undefined, // Live
   });
 
-  // Fetch Scenario Data (only if scenario selected)
-  const { data: scenarioData, isLoading: isScenarioLoading } = trpc.portfolios.getDashboard.useQuery(
-    { scenarioId: currentScenarioId! },
+  // Fetch Scenario Projections
+  const { data: scenarioProjections, isLoading: isScenarioLoading } = trpc.calculations.portfolioProjections.useQuery(
+    {
+      startYear: currentYear,
+      endYear: currentYear + projectionYears,
+      scenarioId: currentScenarioId!,
+    },
     { enabled: !!currentScenarioId }
   );
 
@@ -23,90 +32,148 @@ export default function Comparison() {
 
   if (!currentScenarioId) {
     return (
-      <div className="p-8 text-center">
+      <div className="p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
         <h2 className="text-2xl font-bold mb-4">Select a Scenario to Compare</h2>
-        <p className="text-gray-500">Please select a scenario from the dropdown above to compare it with your live portfolio.</p>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Use the dropdown in the sidebar to select a scenario. This will allow you to compare your current portfolio against a hypothetical future.
+        </p>
       </div>
     );
   }
 
   if (isLiveLoading || isScenarioLoading) {
-    return <div className="p-8">Loading comparison...</div>;
+    return <div className="p-8 flex items-center justify-center min-h-[60vh]">Loading comparison projections...</div>;
   }
 
-  const comparisonData = [
-    {
-      name: "Total Value",
-      Live: liveData?.totalValue || 0,
-      Scenario: scenarioData?.totalValue || 0,
-    },
-    {
-      name: "Total Debt",
-      Live: liveData?.totalDebt || 0,
-      Scenario: scenarioData?.totalDebt || 0,
-    },
-    {
-      name: "Net Equity",
-      Live: liveData?.totalEquity || 0,
-      Scenario: scenarioData?.totalEquity || 0,
-    },
-  ];
+  // Combine Data for Chart
+  const chartData = liveProjections?.map((livePoint) => {
+    const scenarioPoint = scenarioProjections?.find(p => p.year === livePoint.year);
+    return {
+      year: `FY ${livePoint.year.toString().slice(-2)}`,
+      fullYear: livePoint.year,
+      "Live Net Worth": livePoint.totalEquity / 100,
+      "Scenario Net Worth": (scenarioPoint?.totalEquity || 0) / 100,
+    };
+  }) || [];
+
+  // Calculate Wealth Delta at Milestones
+  const getWealthDelta = (yearOffset: number) => {
+    const targetYear = currentYear + yearOffset;
+    const live = liveProjections?.find(p => p.year === targetYear)?.totalEquity || 0;
+    const scenario = scenarioProjections?.find(p => p.year === targetYear)?.totalEquity || 0;
+    return scenario - live;
+  };
+
+  const delta10 = getWealthDelta(10);
+  const delta20 = getWealthDelta(20);
+  const delta30 = getWealthDelta(30);
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Scenario Comparison</h1>
-        <div className="flex items-center gap-4 text-sm text-gray-500">
-          <span className="font-medium text-gray-900">Live Portfolio</span>
-          <ArrowRight className="w-4 h-4" />
-          <span className="font-medium text-blue-600">{currentScenarioName}</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Future Wealth Comparison</h1>
+          <p className="text-muted-foreground mt-1">Projecting your Net Worth over the next 30 years.</p>
+        </div>
+
+        <div className="flex items-center gap-3 text-sm bg-muted/50 px-4 py-2 rounded-full border">
+          <span className="font-semibold text-slate-600">Live</span>
+          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+          <span className="font-semibold text-blue-600">{currentScenarioName}</span>
         </div>
       </div>
 
+      {/* Delta Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Comparison Cards */}
-        <ComparisonCard
-          title="Total Value"
-          live={liveData?.totalValue || "$0"}
-          scenario={scenarioData?.totalValue || "$0"}
-          icon={DollarSign}
-        />
-        <ComparisonCard
-          title="Total Debt"
-          live={liveData?.totalDebt || "$0"}
-          scenario={scenarioData?.totalDebt || "$0"}
-          icon={TrendingUp}
-          inverse // Lower debt is better usually, but context depends.
-        />
-        <ComparisonCard
-          title="Net Equity"
-          live={liveData?.totalEquity || "$0"}
-          scenario={scenarioData?.totalEquity || "$0"}
-          icon={Building2}
-        />
+        <DeltaCard year={10} delta={delta10} />
+        <DeltaCard year={20} delta={delta20} />
+        <DeltaCard year={30} delta={delta30} />
       </div>
 
-      <Card>
+      {/* Main Chart */}
+      <Card className="border-2">
         <CardHeader>
-          <CardTitle>Financial Overview</CardTitle>
+          <CardTitle>Net Worth Projection</CardTitle>
+          <CardDescription>Comparing your current trajectory vs. the scenario.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[400px] w-full">
+          <div className="h-[500px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={comparisonData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                <Legend />
-                <Bar dataKey="Live" fill="#94a3b8" />
-                <Bar dataKey="Scenario" fill="#2563eb" />
-              </BarChart>
+              <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorLive" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#64748b" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#64748b" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorScenario" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+                <XAxis
+                  dataKey="year"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="var(--muted-foreground)"
+                />
+                <YAxis
+                  tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`}
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="var(--muted-foreground)"
+                />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value * 100)}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Legend iconType="circle" />
+                <Area
+                  type="monotone"
+                  dataKey="Live Net Worth"
+                  stroke="#64748b"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorLive)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Scenario Net Worth"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorScenario)"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function DeltaCard({ year, delta }: { year: number, delta: number }) {
+  const isPositive = delta >= 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Year {year} Difference
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={`text-2xl font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+          {isPositive ? '+' : ''}{formatCurrency(delta)}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {isPositive ? 'Extra wealth generated' : 'Less wealth generated'}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
