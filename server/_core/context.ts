@@ -15,28 +15,18 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
   let user = null;
 
   try {
-    // 1. Check for Clerk Token in Authorization header or Cookie
-    // Clerk usually sends "Authorization: Bearer <token>"
-    // or a "__session" cookie.
     const authHeader = req.headers.authorization;
     const token = (typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : undefined) || (req.cookies as any)?.__session;
 
     if (token) {
-      // 2. Verify the session
       const session = await sessions.verifySession(token, process.env.CLERK_SECRET_KEY || "");
-
       if (session) {
-        // 3. Sync with your local DB
-        // We use Clerk's User ID (sub) to match your DB's openId
-        const dbUser = await db.getUserByOpenId(session.userId);
+        user = await db.getUserByOpenId(session.userId); // Optimization: Try DB first
 
-        if (dbUser) {
-          user = dbUser;
-        } else {
-          // Optional: Just-in-time creation if they don't exist in your DB yet
+        if (!user) {
+          // Fallback: Sync from Clerk if not in DB
           const clerkUser = await users.getUser(session.userId);
           const email = clerkUser.emailAddresses[0]?.emailAddress;
-
           await db.upsertUser({
             openId: session.userId,
             email: email,
@@ -55,6 +45,46 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
   return {
     req,
     res,
+    user,
+  };
+}
+
+export async function createFetchContext(opts: FetchCreateContextFnOptions): Promise<TrpcContext> {
+  const { req, resHeaders } = opts;
+  let user = null;
+
+  try {
+    const authHeader = req.headers.get("authorization");
+    const token = (authHeader ? authHeader.replace("Bearer ", "") : undefined);
+    // Note: Generic Request doesn't give easy access to cookies without parsing.
+    // For Vercel Edge/Serverless, Authorization header is preferred.
+
+    if (token) {
+      const session = await sessions.verifySession(token, process.env.CLERK_SECRET_KEY || "");
+      if (session) {
+        user = await db.getUserByOpenId(session.userId);
+
+        if (!user) {
+          const clerkUser = await users.getUser(session.userId);
+          const email = clerkUser.emailAddresses[0]?.emailAddress;
+          await db.upsertUser({
+            openId: session.userId,
+            email: email,
+            name: `${clerkUser.firstName} ${clerkUser.lastName}`,
+            role: 'user',
+            loginMethod: 'clerk'
+          });
+          user = await db.getUserByOpenId(session.userId);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Auth verification failed (fetch):", err);
+  }
+
+  return {
+    req: req as any, // Cast generic Request to any to satisfy TrpcContext's likely Express requirement or update TrpcContext
+    res: { setHeader: (k: string, v: string) => resHeaders.set(k, v) } as any, // Mock Response
     user,
   };
 }
