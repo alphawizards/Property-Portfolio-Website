@@ -4,6 +4,8 @@ import { useAuth, SignInButton, SignUpButton } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 
+import { SimpleEquityCalculator } from "@/components/SimpleEquityCalculator";
+
 export default function LandingPage() {
     const { isSignedIn, isLoaded } = useAuth();
     const [, setLocation] = useLocation();
@@ -43,25 +45,31 @@ export default function LandingPage() {
 
             {/* Hero Section */}
             <main className="flex-1">
-                <section className="space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-32">
-                    <div className="container flex max-w-[64rem] flex-col items-center gap-4 text-center">
-                        <div className="rounded-2xl bg-muted px-4 py-1.5 text-sm font-medium">
-                            Now in Public Beta
+                <section className="space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-24">
+                    <div className="container grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
+                        <div className="flex flex-col items-center lg:items-start gap-4 text-center lg:text-left">
+                            <div className="rounded-2xl bg-muted px-4 py-1.5 text-sm font-medium w-fit">
+                                Now in Public Beta
+                            </div>
+                            <h1 className="font-heading text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight">
+                                Master Your Property <br className="hidden sm:inline" />
+                                <span className="text-primary">Investment Portfolio</span>
+                            </h1>
+                            <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
+                                Professional-grade analytics for serious property investors. Track equity, cashflow, and tax benefits in one beautiful dashboard.
+                            </p>
+                            <div className="space-x-4">
+                                <SignUpButton mode="modal">
+                                    <Button size="lg" className="gap-2">
+                                        Start for Free <ArrowRight className="h-4 w-4" />
+                                    </Button>
+                                </SignUpButton>
+                            </div>
                         </div>
-                        <h1 className="font-heading text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-                            Master Your Property <br className="hidden sm:inline" />
-                            <span className="text-primary">Investment Portfolio</span>
-                        </h1>
-                        <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-                            Professional-grade analytics for serious property investors. Track equity, cashflow, and tax benefits in one beautiful dashboard.
-                        </p>
-                        <div className="space-x-4">
-                            <SignUpButton mode="modal">
-                                <Button size="lg" className="gap-2">
-                                    Start for Free <ArrowRight className="h-4 w-4" />
-                                </Button>
-                            </SignUpButton>
-                            {/* Removed Demo button as it caused confusion and is now redundant with free sign up */}
+
+                        {/* Calculator Widget */}
+                        <div className="w-full max-w-md mx-auto lg:mx-0">
+                            <SimpleEquityCalculator />
                         </div>
                     </div>
                 </section>
