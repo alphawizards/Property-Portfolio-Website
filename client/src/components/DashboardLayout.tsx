@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Plus, GitBranch } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Plus, GitBranch, Building2, PieChart, FileText, CreditCard, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -203,8 +203,8 @@ function DashboardLayoutContent({
               {!isCollapsed && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between mb-4">
-                      <span className="truncate">
+                    <Button variant="outline" className="w-full justify-between mb-2 border-sidebar-border bg-sidebar text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                      <span className="truncate font-semibold">
                         {currentScenarioId
                           ? scenarios?.find(s => s.id === currentScenarioId)?.name
                           : "Live Portfolio"}
@@ -235,25 +235,84 @@ function DashboardLayoutContent({
               )}
             </div>
 
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+            <SidebarMenu className="px-2">
+              <div className="mb-2">
+                {!isCollapsed && <h4 className="px-2 mb-1 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">Assets</h4>}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/"}
+                    onClick={() => setLocation("/")}
+                    tooltip="Dashboard"
+                    className="h-9"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location.startsWith("/properties")}
+                    onClick={() => setLocation("/properties")}
+                    tooltip="Properties"
+                    className="h-9"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    <span>Properties</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </div>
+
+              <div className="mb-2">
+                {!isCollapsed && <h4 className="px-2 mb-1 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">Analysis</h4>}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/comparison"}
+                    onClick={() => setLocation("/comparison")}
+                    tooltip="Comparison"
+                    className="h-9"
+                  >
+                    <PieChart className="h-4 w-4" />
+                    <span>Comparison</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/reports"}
+                    onClick={() => setLocation("/reports")}
+                    tooltip="Reports"
+                    className="h-9 opacity-50 cursor-not-allowed"
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span>Reports (Soon)</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </div>
+
+              <div>
+                {!isCollapsed && <h4 className="px-2 mb-1 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">System</h4>}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/subscription"}
+                    onClick={() => setLocation("/subscription")}
+                    tooltip="Subscription"
+                    className="h-9"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    <span>Subscription</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/settings"}
+                    onClick={() => setLocation("/settings")}
+                    tooltip="Settings"
+                    className="h-9"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Settings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </div>
             </SidebarMenu>
           </SidebarContent>
 
