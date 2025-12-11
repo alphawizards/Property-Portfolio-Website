@@ -41,5 +41,30 @@ export const adminProcedure = t.procedure.use(
         user: ctx.user,
       },
     });
-  }),
+  })
 );
+
+const isPremium = t.middleware(async opts => {
+  const { ctx, next } = opts;
+
+  if (!ctx.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+  }
+
+  const premiumTiers = ["PREMIUM_MONTHLY", "PREMIUM_ANNUAL"];
+  if (!premiumTiers.includes(ctx.user.subscriptionTier)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This feature requires a premium subscription"
+    });
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+    },
+  });
+});
+
+export const premiumProcedure = t.procedure.use(isPremium);
