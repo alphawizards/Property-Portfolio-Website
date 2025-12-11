@@ -38,7 +38,7 @@ export const feedbackRouter = router({
     .mutation(async ({ ctx, input }) => {
       // const db = await getDb();
 
-      const result = await db
+      const [result] = await db
         .insert(feedback)
         .values({
           userId: ctx.user.id,
@@ -53,10 +53,11 @@ export const feedbackRouter = router({
           metadata: input.metadata,
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
+        })
+        .returning({ id: feedback.id });
       return {
         success: true,
-        feedbackId: Number(result.insertId),
+        feedbackId: Number(result.id),
         message: "Thank you for your feedback! We'll review it shortly.",
       };
     }),
@@ -79,7 +80,7 @@ export const feedbackRouter = router({
     .mutation(async ({ input }) => {
       // const db = await getDb();
 
-      const result = await db
+      const [result] = await db
         .insert(feedback)
         .values({
           userId: null, // anonymous
@@ -93,11 +94,12 @@ export const feedbackRouter = router({
           status: "New",
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
+        })
+        .returning({ id: feedback.id });
 
       return {
         success: true,
-        feedbackId: Number(result.insertId),
+        feedbackId: Number(result.id),
         message: "Thank you for your feedback!",
       };
     }),

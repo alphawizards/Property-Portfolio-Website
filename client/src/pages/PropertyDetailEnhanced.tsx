@@ -190,8 +190,10 @@ export default function PropertyDetailEnhanced() {
     }
   };
 
+  const frequency = expenses?.[0]?.frequency || "Weekly";
+
   const weeklyExpenses = expenseBreakdown?.reduce((total, item) => {
-    return total + convertToWeekly(item.amount, item.frequency);
+    return total + convertToWeekly(item.amount, frequency);
   }, 0) || 0;
 
   // Calculate monthly mortgage payments

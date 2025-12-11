@@ -1,9 +1,11 @@
 import "dotenv/config";
-import { drizzle } from "drizzle-orm/mysql2";
-import { 
-  properties, 
-  propertyOwnership, 
-  purchaseCosts, 
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import {
+  users,
+  properties,
+  propertyOwnership,
+  purchaseCosts,
   propertyUsagePeriods,
   loans,
   propertyValuations,
@@ -15,14 +17,28 @@ import {
   capitalExpenditure
 } from "./drizzle/schema.ts";
 
-const db = drizzle(process.env.DATABASE_URL);
+// SSL required for PlanetScale connection
+const client = postgres(process.env.DATABASE_URL, { ssl: 'require', prepare: false });
+const db = drizzle(client);
 
 async function seedTestData() {
-  console.log("🌱 Seeding test property data...");
+  console.log("🌱 Seeding test property data (PostgreSQL)...");
 
   try {
-    // Get the current user (assuming user ID 1 exists)
-    const userId = 1;
+    // Get the current user (create if not exists)
+    console.log("Creating/Fetching test user...");
+    const [user] = await db.insert(users).values({
+      openId: "seed_test_user",
+      name: "Test User",
+      email: "test@example.com",
+      role: "user",
+      isActive: true,
+    }).onConflictDoUpdate({
+      target: users.openId,
+      set: { name: "Test User" },
+    }).returning({ id: users.id });
+
+    const userId = user.id;
 
     // 1. Create Investment Property
     console.log("Creating investment property...");
@@ -36,11 +52,11 @@ async function seedTestData() {
       ownershipStructure: "Trust",
       linkedEntity: "Smith Family Trust",
       purchaseDate: new Date("2020-01-15"),
-      purchasePrice: 65000000, // $650k in cents
+      purchasePrice: 65000000,
       status: "Actual",
-    });
+    }).returning({ id: properties.id });
 
-    const propertyId = property.insertId;
+    const propertyId = property.id;
     console.log(`✓ Property created (ID: ${propertyId})`);
 
     // 2. Add Ownership
@@ -63,29 +79,29 @@ async function seedTestData() {
     console.log("Adding purchase costs...");
     await db.insert(purchaseCosts).values({
       propertyId: propertyId,
-      agentFee: 0, // Buyer doesn't pay agent fee in Australia
-      stampDuty: 2500000, // ~3.85% for QLD in cents
-      legalFee: 150000, // in cents
-      inspectionFee: 50000, // in cents
-      otherCosts: 200000, // Misc costs in cents
+      agentFee: 0,
+      stampDuty: 2500000,
+      legalFee: 150000,
+      inspectionFee: 50000,
+      otherCosts: 200000,
     });
     console.log("✓ Purchase costs added");
 
-    // 4. Add Usage Period (Investment from day 1)
+    // 4. Add Usage Period 
     console.log("Adding usage period...");
     await db.insert(propertyUsagePeriods).values({
       propertyId: propertyId,
       startDate: new Date("2020-01-15"),
-      endDate: null, // Ongoing
+      endDate: null,
       usageType: "Investment",
     });
     console.log("✓ Usage period added");
 
-    // 5. Add Main Principal Loan (80% LVR with 5 year IO)
+    // 5. Add Main Principal Loan
     console.log("Adding main principal loan...");
-    const loanAmount = 52000000; // 80% of $650k in cents
+    const loanAmount = 52000000;
     const loanStartDate = new Date("2020-01-15");
-    
+
     await db.insert(loans).values({
       propertyId: propertyId,
       securityPropertyId: propertyId,
@@ -95,15 +111,15 @@ async function seedTestData() {
       loanStructure: "InterestOnly",
       startDate: loanStartDate,
       originalAmount: loanAmount,
-      currentAmount: loanAmount, // Still IO, no principal paid
-      interestRate: 550, // 5.50% (stored as basis points)
-      remainingTermYears: 25, // 30 year loan, 5 years in
-      remainingIOPeriodYears: 0, // IO period ended
+      currentAmount: loanAmount,
+      interestRate: 550,
+      remainingTermYears: 25,
+      remainingIOPeriodYears: 0,
       repaymentFrequency: "Monthly",
     });
     console.log("✓ Main loan added");
 
-    // 6. Add Equity Loan (Used for renovation)
+    // 6. Add Equity Loan 
     console.log("Adding equity loan...");
     await db.insert(loans).values({
       propertyId: propertyId,
@@ -113,9 +129,9 @@ async function seedTestData() {
       loanPurpose: "Renovation",
       loanStructure: "InterestOnly",
       startDate: new Date("2022-06-01"),
-      originalAmount: 5000000, // $50k in cents
-      currentAmount: 5000000, // in cents
-      interestRate: 600, // 6.00%
+      originalAmount: 5000000,
+      currentAmount: 5000000,
+      interestRate: 600,
       remainingTermYears: 8,
       remainingIOPeriodYears: 3,
       repaymentFrequency: "Monthly",
@@ -128,17 +144,17 @@ async function seedTestData() {
       {
         propertyId: propertyId,
         valuationDate: new Date("2020-01-15"),
-        value: 65000000, // Purchase price in cents
+        value: 65000000,
       },
       {
         propertyId: propertyId,
         valuationDate: new Date("2022-06-01"),
-        value: 75000000, // After 2.5 years in cents
+        value: 75000000,
       },
       {
         propertyId: propertyId,
         valuationDate: new Date("2025-12-02"),
-        value: 85000000, // Current valuation in cents
+        value: 85000000,
       },
     ]);
     console.log("✓ Valuations added");
@@ -150,19 +166,19 @@ async function seedTestData() {
         propertyId: propertyId,
         startYear: 2025,
         endYear: 2030,
-        growthRate: 500, // 5% per year
+        growthRate: 500,
       },
       {
         propertyId: propertyId,
         startYear: 2030,
         endYear: 2040,
-        growthRate: 400, // 4% per year
+        growthRate: 400,
       },
       {
         propertyId: propertyId,
         startYear: 2040,
-        endYear: null, // Forever
-        growthRate: 350, // 3.5% per year
+        endYear: null,
+        growthRate: 350,
       },
     ]);
     console.log("✓ Growth rates added");
@@ -172,10 +188,10 @@ async function seedTestData() {
     await db.insert(rentalIncome).values({
       propertyId: propertyId,
       startDate: new Date("2020-02-01"),
-      endDate: null, // Ongoing
-      amount: 65000, // $650 per week in cents
+      endDate: null,
+      amount: 65000,
       frequency: "Weekly",
-      growthRate: 300, // 3% annual growth
+      growthRate: 300,
     });
     console.log("✓ Rental income added");
 
@@ -184,44 +200,44 @@ async function seedTestData() {
     const [expense] = await db.insert(expenseLogs).values({
       propertyId: propertyId,
       date: new Date("2025-01-01"),
-      totalAmount: 120000, // $1,200 per month in cents
+      totalAmount: 120000,
       frequency: "Monthly",
-      growthRate: 300, // 3% annual growth
-    });
+      growthRate: 300,
+    }).returning({ id: expenseLogs.id });
 
-    const expenseId = expense.insertId;
+    const expenseId = expense.id;
 
     // Add expense breakdown
     await db.insert(expenseBreakdown).values([
       {
         expenseLogId: expenseId,
         category: "Council Rates",
-        amount: 35000, // in cents
+        amount: 35000,
       },
       {
         expenseLogId: expenseId,
         category: "Water Rates",
-        amount: 10000, // in cents
+        amount: 10000,
       },
       {
         expenseLogId: expenseId,
         category: "Insurance",
-        amount: 15000, // in cents
+        amount: 15000,
       },
       {
         expenseLogId: expenseId,
         category: "Property Management",
-        amount: 28000, // ~8% of rent in cents
+        amount: 28000,
       },
       {
         expenseLogId: expenseId,
         category: "Maintenance & Repairs",
-        amount: 20000, // in cents
+        amount: 20000,
       },
       {
         expenseLogId: expenseId,
         category: "Strata Fees",
-        amount: 12000, // in cents
+        amount: 12000,
       },
     ]);
     console.log("✓ Expenses added");
@@ -231,39 +247,27 @@ async function seedTestData() {
     await db.insert(depreciationSchedule).values({
       propertyId: propertyId,
       asAtDate: new Date("2025-07-01"),
-      annualAmount: 850000, // $8,500 per year in cents
+      annualAmount: 850000,
     });
     console.log("✓ Depreciation added");
 
-    // 12. Add Capital Expenditure (Renovation)
+    // 12. Add Capital Expenditure 
     console.log("Adding capital expenditure...");
     await db.insert(capitalExpenditure).values({
       propertyId: propertyId,
       name: "Kitchen & Bathroom Renovation",
-      amount: 5000000, // in cents
+      amount: 5000000,
       date: new Date("2022-06-15"),
     });
     console.log("✓ Capital expenditure added");
 
     console.log("\n✅ Test data seeded successfully!");
-    console.log("\nProperty Summary:");
-    console.log("- Purchase Price: $650,000");
-    console.log("- Current Value: $850,000");
-    console.log("- Main Loan: $520,000 @ 5.50% IO");
-    console.log("- Equity Loan: $50,000 @ 6.00% IO");
-    console.log("- Total Debt: $570,000");
-    console.log("- Equity: $280,000 (32.9% LVR)");
-    console.log("- Rental Income: $650/week ($33,800/year)");
-    console.log("- Expenses: $1,200/month ($14,400/year)");
-    console.log("- Net Cashflow: ~$19,400/year (before tax)");
-    console.log("- Depreciation: $8,500/year");
 
+    process.exit(0);
   } catch (error) {
     console.error("❌ Error seeding data:", error);
     throw error;
   }
-
-  process.exit(0);
 }
 
 seedTestData();

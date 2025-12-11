@@ -895,6 +895,7 @@ export const appRouter = router({
           totalInterest: z.number().int().optional(),
           totalPayments: z.number().int().optional(),
           futurePropertyValue: z.number().int().optional(),
+          projectionYears: z.number().int().default(30),
         })
       )
       .mutation(async ({ input, ctx }) => {

@@ -1,389 +1,413 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, datetime } from "drizzle-orm/mysql-core";
-
 /**
- * Core user table backing auth flow.
+ * Complete PostgreSQL Schema
+ * Full property portfolio schema adapted for PostgreSQL
  */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+
+import {
+  pgTable,
+  serial,
+  varchar,
+  text,
+  integer,
+  timestamp,
+  boolean,
+  pgEnum,
+  uniqueIndex,
+  index,
+  numeric,
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+export const roleEnum = pgEnum('role', ['user', 'admin']);
+// Updated to match code usage (canceled vs cancelled) and added missing statuses
+export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'canceled', 'past_due', 'trialing', 'incomplete', 'suspended', 'expired', 'cancelled']);
+export const subscriptionTierEnum = pgEnum('subscription_tier', ['FREE', 'PREMIUM_MONTHLY', 'PREMIUM_ANNUAL']);
+
+export const portfolioTypeEnum = pgEnum('portfolio_type', ['Normal', 'Trust', 'Company']);
+export const propertyTypeEnum = pgEnum('property_type', ['Residential', 'Commercial', 'Industrial', 'Land']);
+export const ownershipStructureEnum = pgEnum('ownership_structure', ['Trust', 'Individual', 'Company', 'Partnership']);
+export const propertyStatusEnum = pgEnum('property_status', ['Actual', 'Projected']);
+export const usageTypeEnum = pgEnum('usage_type', ['Investment', 'PPOR']);
+export const loanTypeEnum = pgEnum('loan_type', ['EquityLoan', 'PrincipalLoan']);
+export const loanPurposeEnum = pgEnum('loan_purpose', ['PropertyPurchase', 'Renovation', 'Investment', 'Other']);
+export const loanStructureEnum = pgEnum('loan_structure', ['InterestOnly', 'PrincipalAndInterest']);
+export const frequencyEnum = pgEnum('frequency', ['Weekly', 'Fortnightly', 'Monthly', 'Quarterly', 'Annually', 'Annual', 'OneTime']);
+
+export const feedbackCategoryEnum = pgEnum('feedback_category', ["Bug", "Feature Request", "General", "Complaint", "Praise", "Other"]);
+export const feedbackStatusEnum = pgEnum('feedback_status', ["New", "In Progress", "Resolved", "Closed"]);
+
+// ============================================================================
+// USERS & SUBSCRIPTIONS
+// ============================================================================
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  subscriptionTier: mysqlEnum("subscriptionTier", ["FREE", "PREMIUM_MONTHLY", "PREMIUM_ANNUAL"]).default("FREE").notNull(),
+  role: roleEnum("role").default('user').notNull(),
+  isActive: boolean('is_active').notNull().default(true),
+
+  // Subscription fields (Ported from functionality requirements)
+  subscriptionTier: subscriptionTierEnum("subscriptionTier").default('FREE').notNull(),
+  subscriptionStatus: subscriptionStatusEnum("subscriptionStatus"),
+  subscriptionEndDate: timestamp("subscriptionEndDate"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
-  subscriptionStatus: mysqlEnum("subscriptionStatus", ["active", "canceled", "past_due", "trialing", "incomplete"]),
-  subscriptionEndDate: timestamp("subscriptionEndDate"),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/**
- * Portfolios table - stores portfolio groupings of properties
- */
-export const portfolios = mysqlTable("portfolios", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const subscriptionTiers = pgTable("subscription_tiers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull(),
+  displayName: varchar("displayName", { length: 100 }).notNull(),
+  description: text("description"),
+  maxProperties: integer("maxProperties").notNull().default(0),
+  maxForecastYears: integer("maxForecastYears").notNull().default(10),
+  canUseAdvancedAnalytics: boolean("canUseAdvancedAnalytics").notNull().default(false),
+  canUseScenarioComparison: boolean("canUseScenarioComparison").notNull().default(false),
+  canExportReports: boolean("canExportReports").notNull().default(false),
+  canUseTaxCalculator: boolean("canUseTaxCalculator").notNull().default(false),
+  priceMonthly: numeric("priceMonthly", { precision: 10, scale: 2 }).notNull().default("0"),
+  priceYearly: numeric("priceYearly", { precision: 10, scale: 2 }).notNull().default("0"),
+  stripePriceIdMonthly: varchar("stripePriceIdMonthly", { length: 255 }),
+  stripePriceIdYearly: varchar("stripePriceIdYearly", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  nameIdx: uniqueIndex("idx_subscription_tiers_name").on(table.name),
+}));
+
+export type SubscriptionTier = typeof subscriptionTiers.$inferSelect;
+export type InsertSubscriptionTier = typeof subscriptionTiers.$inferInsert;
+
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tierId: integer("tierId").notNull().references(() => subscriptionTiers.id, { onDelete: 'restrict' }),
+  status: subscriptionStatusEnum("status").notNull().default('active'),
+  startDate: timestamp("startDate").defaultNow().notNull(),
+  endDate: timestamp("endDate"),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  currentPeriodStart: timestamp("currentPeriodStart"),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: uniqueIndex("idx_user_subscriptions_user_id").on(table.userId),
+  tierIdIdx: index("idx_user_subscriptions_tier_id").on(table.tierId),
+  statusIdx: index("idx_user_subscriptions_status").on(table.status),
+}));
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+
+// ============================================================================
+// PORTFOLIOS
+// ============================================================================
+
+export const portfolios = pgTable("portfolios", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: varchar("name", { length: 255 }).notNull(),
-  type: mysqlEnum("type", ["Normal", "Trust", "Company"]).default("Normal").notNull(),
+  type: portfolioTypeEnum("type").default('Normal').notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Portfolio = typeof portfolios.$inferSelect;
 export type InsertPortfolio = typeof portfolios.$inferInsert;
 
-/**
- * Properties table - stores core property information
- */
-export const properties = mysqlTable("properties", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  portfolioId: int("portfolioId"),
-  scenarioId: int("scenarioId"),
-  nickname: varchar("nickname", { length: 255 }).notNull(),
-  address: text("address").notNull(),
-  state: varchar("state", { length: 100 }).notNull(),
-  suburb: varchar("suburb", { length: 255 }).notNull(),
-  propertyType: mysqlEnum("propertyType", ["Residential", "Commercial", "Industrial", "Land"]).default("Residential").notNull(),
-  ownershipStructure: mysqlEnum("ownershipStructure", ["Trust", "Individual", "Company", "Partnership"]).notNull(),
-  linkedEntity: varchar("linkedEntity", { length: 255 }),
-  purchaseDate: datetime("purchaseDate").notNull(),
-  purchasePrice: int("purchasePrice").notNull(), // in cents
-  saleDate: datetime("saleDate"),
-  salePrice: int("salePrice"), // in cents
-  status: mysqlEnum("status", ["Actual", "Projected"]).default("Actual").notNull(),
+export const portfolioGoals = pgTable("portfolio_goals", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  goalYear: integer("goalYear").notNull(),
+  targetEquity: integer("targetEquity"),
+  targetCashflow: integer("targetCashflow"),
+  targetValue: integer("targetValue"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type Property = typeof properties.$inferSelect;
-export type InsertProperty = typeof properties.$inferInsert;
-
-/**
- * Property ownership - tracks ownership percentages
- */
-export const propertyOwnership = mysqlTable("property_ownership", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  ownerName: varchar("ownerName", { length: 255 }).notNull(),
-  percentage: int("percentage").notNull(), // 0-100
-});
-
-export type PropertyOwnership = typeof propertyOwnership.$inferSelect;
-export type InsertPropertyOwnership = typeof propertyOwnership.$inferInsert;
-
-/**
- * Purchase costs - detailed breakdown of property purchase costs
- */
-export const purchaseCosts = mysqlTable("purchase_costs", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull().unique(),
-  agentFee: int("agentFee").default(0).notNull(), // in cents
-  stampDuty: int("stampDuty").default(0).notNull(), // in cents
-  legalFee: int("legalFee").default(0).notNull(), // in cents
-  inspectionFee: int("inspectionFee").default(0).notNull(), // in cents
-  otherCosts: int("otherCosts").default(0).notNull(), // in cents
-});
-
-export type PurchaseCosts = typeof purchaseCosts.$inferSelect;
-export type InsertPurchaseCosts = typeof purchaseCosts.$inferInsert;
-
-/**
- * Property usage periods - tracks Investment vs PPOR over time
- */
-export const propertyUsagePeriods = mysqlTable("property_usage_periods", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  startDate: datetime("startDate").notNull(),
-  endDate: datetime("endDate"), // null for ongoing
-  usageType: mysqlEnum("usageType", ["Investment", "PPOR"]).notNull(),
-});
-
-export type PropertyUsagePeriod = typeof propertyUsagePeriods.$inferSelect;
-export type InsertPropertyUsagePeriod = typeof propertyUsagePeriods.$inferInsert;
-
-/**
- * Loans - stores both equity loans and principal loans
- */
-export const loans = mysqlTable("loans", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  securityPropertyId: int("securityPropertyId"), // property used as security (can be different)
-  loanType: mysqlEnum("loanType", ["EquityLoan", "PrincipalLoan"]).notNull(),
-  lenderName: varchar("lenderName", { length: 255 }).notNull(),
-  loanPurpose: mysqlEnum("loanPurpose", ["PropertyPurchase", "Renovation", "Investment", "Other"]).notNull(),
-  loanStructure: mysqlEnum("loanStructure", ["InterestOnly", "PrincipalAndInterest"]).notNull(),
-  startDate: datetime("startDate").notNull(),
-  originalAmount: int("originalAmount").notNull(), // in cents
-  currentAmount: int("currentAmount").notNull(), // in cents
-  interestRate: int("interestRate").notNull(), // in basis points (5.5% = 550)
-  remainingTermYears: int("remainingTermYears").notNull(),
-  remainingIOPeriodYears: int("remainingIOPeriodYears").default(0).notNull(),
-  repaymentFrequency: mysqlEnum("repaymentFrequency", ["Monthly", "Fortnightly", "Weekly"]).default("Monthly").notNull(),
-  offsetBalance: int("offsetBalance").default(0).notNull(), // in cents - offset account balance
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type Loan = typeof loans.$inferSelect;
-export type InsertLoan = typeof loans.$inferInsert;
-
-/**
- * Property valuations - tracks property value over time
- */
-export const propertyValuations = mysqlTable("property_valuations", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  valuationDate: datetime("valuationDate").notNull(),
-  value: int("value").notNull(), // in cents
-});
-
-export type PropertyValuation = typeof propertyValuations.$inferSelect;
-export type InsertPropertyValuation = typeof propertyValuations.$inferInsert;
-
-/**
- * Growth rate periods - defines expected growth rates for different time periods
- */
-export const growthRatePeriods = mysqlTable("growth_rate_periods", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  startYear: int("startYear").notNull(),
-  endYear: int("endYear"), // null for forever
-  growthRate: int("growthRate").notNull(), // in basis points (7% = 700)
-});
-
-export type GrowthRatePeriod = typeof growthRatePeriods.$inferSelect;
-export type InsertGrowthRatePeriod = typeof growthRatePeriods.$inferInsert;
-
-/**
- * Rental income - tracks rental income streams
- */
-export const rentalIncome = mysqlTable("rental_income", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  startDate: datetime("startDate").notNull(),
-  endDate: datetime("endDate"), // null for ongoing
-  amount: int("amount").notNull(), // in cents
-  frequency: mysqlEnum("frequency", ["Monthly", "Weekly", "Fortnightly"]).default("Monthly").notNull(),
-  growthRate: int("growthRate").default(0).notNull(), // in basis points
-});
-
-export type RentalIncome = typeof rentalIncome.$inferSelect;
-export type InsertRentalIncome = typeof rentalIncome.$inferInsert;
-
-/**
- * Expense logs - records property expenses over time
- */
-export const expenseLogs = mysqlTable("expense_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  date: datetime("date").notNull(),
-  totalAmount: int("totalAmount").notNull(), // in cents
-  frequency: mysqlEnum("frequency", ["Monthly", "Annual", "OneTime", "Weekly", "Quarterly", "Annually"]).notNull(),
-  growthRate: int("growthRate").default(0).notNull(), // in basis points
-});
-
-export type ExpenseLog = typeof expenseLogs.$inferSelect;
-export type InsertExpenseLog = typeof expenseLogs.$inferInsert;
-
-/**
- * Expense breakdown - detailed categorization of expenses
- */
-export const expenseBreakdown = mysqlTable("expense_breakdown", {
-  id: int("id").autoincrement().primaryKey(),
-  expenseLogId: int("expenseLogId").notNull(),
-  category: varchar("category", { length: 255 }).notNull(),
-  amount: int("amount").notNull(), // in cents
-  frequency: mysqlEnum("frequency", ["Weekly", "Monthly", "Quarterly", "Annually"]).default("Annually").notNull(),
-});
-
-export type ExpenseBreakdown = typeof expenseBreakdown.$inferSelect;
-export type InsertExpenseBreakdown = typeof expenseBreakdown.$inferInsert;
-
-/**
- * Depreciation schedule - tracks depreciation for tax purposes
- */
-export const depreciationSchedule = mysqlTable("depreciation_schedule", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  asAtDate: datetime("asAtDate").notNull(),
-  annualAmount: int("annualAmount").notNull(), // in cents
-});
-
-export type DepreciationSchedule = typeof depreciationSchedule.$inferSelect;
-export type InsertDepreciationSchedule = typeof depreciationSchedule.$inferInsert;
-
-/**
- * Capital expenditure - records capital improvements
- */
-export const capitalExpenditure = mysqlTable("capital_expenditure", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  amount: int("amount").notNull(), // in cents
-  date: datetime("date").notNull(),
-});
-
-export type CapitalExpenditure = typeof capitalExpenditure.$inferSelect;
-export type InsertCapitalExpenditure = typeof capitalExpenditure.$inferInsert;
-
-/**
- * Portfolio goals - stores user-defined portfolio goals
- */
-export const portfolioGoals = mysqlTable("portfolio_goals", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  goalYear: int("goalYear").notNull(),
-  targetEquity: int("targetEquity").notNull(), // in cents
-  targetValue: int("targetValue").notNull(), // in cents
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type PortfolioGoal = typeof portfolioGoals.$inferSelect;
 export type InsertPortfolioGoal = typeof portfolioGoals.$inferInsert;
 
-/**
- * Extra repayments - tracks recurring extra payments on loans
- */
-export const extraRepayments = mysqlTable("extra_repayments", {
-  id: int("id").autoincrement().primaryKey(),
-  loanId: int("loanId").notNull(),
-  amount: int("amount").notNull(), // in cents
-  frequency: mysqlEnum("frequency", ["Monthly", "Fortnightly", "Weekly", "Annually"]).notNull(),
-  startDate: datetime("startDate").notNull(),
-  endDate: datetime("endDate"), // null for full term
+// ============================================================================
+// PROPERTIES
+// ============================================================================
+
+export const properties = pgTable("properties", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  portfolioId: integer("portfolioId").references(() => portfolios.id, { onDelete: 'set null' }),
+  scenarioId: integer("scenarioId"),
+  nickname: varchar("nickname", { length: 255 }).notNull(),
+  address: text("address").notNull(),
+  state: varchar("state", { length: 100 }).notNull(),
+  suburb: varchar("suburb", { length: 100 }).notNull(),
+  propertyType: propertyTypeEnum("propertyType").notNull(),
+  ownershipStructure: ownershipStructureEnum("ownershipStructure").notNull(),
+  linkedEntity: varchar("linkedEntity", { length: 255 }),
+  purchaseDate: timestamp("purchaseDate").notNull(),
+  purchasePrice: integer("purchasePrice").notNull(),
+  saleDate: timestamp("saleDate"),
+  salePrice: integer("salePrice"),
+  status: propertyStatusEnum("status").default('Actual').notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
-export type ExtraRepayment = typeof extraRepayments.$inferSelect;
-export type InsertExtraRepayment = typeof extraRepayments.$inferInsert;
+export type Property = typeof properties.$inferSelect;
+export type InsertProperty = typeof properties.$inferInsert;
 
-/**
- * Lump sum payments - tracks one-time extra payments on loans
- */
-export const lumpSumPayments = mysqlTable("lump_sum_payments", {
-  id: int("id").autoincrement().primaryKey(),
-  loanId: int("loanId").notNull(),
-  amount: int("amount").notNull(), // in cents
-  paymentDate: datetime("paymentDate").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const propertyOwnership = pgTable("property_ownership", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  ownerName: varchar("ownerName", { length: 255 }).notNull(),
+  percentage: integer("percentage").notNull(),
 });
 
-export type LumpSumPayment = typeof lumpSumPayments.$inferSelect;
-export type InsertLumpSumPayment = typeof lumpSumPayments.$inferInsert;
+export type PropertyOwnership = typeof propertyOwnership.$inferSelect;
+export type InsertPropertyOwnership = typeof propertyOwnership.$inferInsert;
 
-/**
- * Interest rate forecasts - stores variable interest rate projections
- */
-export const interestRateForecasts = mysqlTable("interest_rate_forecasts", {
-  id: int("id").autoincrement().primaryKey(),
-  loanId: int("loanId").notNull(),
-  startYear: int("startYear").notNull(),
-  endYear: int("endYear"), // null for forever
-  forecastRate: int("forecastRate").notNull(), // in basis points
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const purchaseCosts = pgTable("purchase_costs", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }).unique(),
+  agentFee: integer("agentFee").default(0).notNull(),
+  stampDuty: integer("stampDuty").default(0).notNull(),
+  legalFee: integer("legalFee").default(0).notNull(),
+  inspectionFee: integer("inspectionFee").default(0).notNull(),
+  otherCosts: integer("otherCosts").default(0).notNull(),
 });
 
-export type InterestRateForecast = typeof interestRateForecasts.$inferSelect;
-export type InsertInterestRateForecast = typeof interestRateForecasts.$inferInsert;
+export type PurchaseCosts = typeof purchaseCosts.$inferSelect;
+export type InsertPurchaseCosts = typeof purchaseCosts.$inferInsert;
 
-/**
- * Loan scenarios - stores saved calculator scenarios for comparison
- */
-export const loanScenarios = mysqlTable("loan_scenarios", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("propertyId").notNull(),
-  userId: int("userId").notNull(),
+export const propertyUsagePeriods = pgTable("property_usage_periods", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate"),
+  usageType: usageTypeEnum("usageType").notNull(),
+});
+
+export type PropertyUsagePeriod = typeof propertyUsagePeriods.$inferSelect;
+export type InsertPropertyUsagePeriod = typeof propertyUsagePeriods.$inferInsert;
+
+export const propertyValuations = pgTable("property_valuations", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  valuationDate: timestamp("valuationDate").notNull(),
+  value: integer("value").notNull(),
+});
+
+export type PropertyValuation = typeof propertyValuations.$inferSelect;
+export type InsertPropertyValuation = typeof propertyValuations.$inferInsert;
+
+export const growthRatePeriods = pgTable("growth_rate_periods", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  startYear: integer("startYear").notNull(),
+  endYear: integer("endYear"),
+  growthRate: integer("growthRate").notNull(),
+});
+
+export type GrowthRatePeriod = typeof growthRatePeriods.$inferSelect;
+export type InsertGrowthRatePeriod = typeof growthRatePeriods.$inferInsert;
+
+// ============================================================================
+// LOANS
+// ============================================================================
+
+export const loans = pgTable("loans", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  securityPropertyId: integer("securityPropertyId").references(() => properties.id, { onDelete: 'set null' }),
+  loanType: loanTypeEnum("loanType").notNull(),
+  lenderName: varchar("lenderName", { length: 255 }).notNull(),
+  loanPurpose: loanPurposeEnum("loanPurpose").notNull(),
+  loanStructure: loanStructureEnum("loanStructure").notNull(),
+  startDate: timestamp("startDate").notNull(),
+  originalAmount: integer("originalAmount").notNull(),
+  currentAmount: integer("currentAmount").notNull(),
+  interestRate: integer("interestRate").notNull(),
+  remainingTermYears: integer("remainingTermYears").notNull(),
+  remainingIOPeriodYears: integer("remainingIOPeriodYears").default(0).notNull(),
+  repaymentFrequency: frequencyEnum("repaymentFrequency").notNull(),
+  offsetBalance: integer("offsetBalance").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Loan = typeof loans.$inferSelect;
+export type InsertLoan = typeof loans.$inferInsert;
+
+export const loanScenarios = pgTable("loan_scenarios", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-
-  // Loan parameters
-  propertyValue: int("propertyValue").notNull(), // in cents
-  deposit: int("deposit").notNull(), // in cents
-  loanAmount: int("loanAmount").notNull(), // in cents
-  interestRate: int("interestRate").notNull(), // in basis points
-  loanTerm: int("loanTerm").notNull(), // in months
-  repaymentFrequency: varchar("repaymentFrequency", { length: 50 }).notNull(),
-  interestOption: varchar("interestOption", { length: 50 }).notNull(),
-
-  // Extra payments
-  offsetBalance: int("offsetBalance").default(0), // in cents
-  extraRepaymentAmount: int("extraRepaymentAmount").default(0), // in cents
-  extraRepaymentFrequency: varchar("extraRepaymentFrequency", { length: 50 }),
-
-  // Property growth
-  propertyGrowthRate: int("propertyGrowthRate").notNull(), // in basis points
-
-  // Calculated results
-  totalInterest: int("totalInterest"), // in cents
-  totalPayments: int("totalPayments"), // in cents
-  futurePropertyValue: int("futurePropertyValue"), // in cents
-
+  propertyId: integer("propertyId").references(() => properties.id, { onDelete: 'set null' }), // Added back propertyId as it was referenced in errors
+  basePropertyId: integer("basePropertyId").references(() => properties.id, { onDelete: 'set null' }),
+  projectionYears: integer("projectionYears").notNull(),
+  scenarioData: text("scenarioData"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type LoanScenario = typeof loanScenarios.$inferSelect;
 export type InsertLoanScenario = typeof loanScenarios.$inferInsert;
 
-/**
- * Documents - stores uploaded files for properties
- */
-export const documents = mysqlTable("documents", {
-  id: int("id").autoincrement().primaryKey(),
-  propertyId: int("property_id").notNull(),
-  fileName: varchar("file_name", { length: 255 }).notNull(),
-  fileUrl: varchar("file_url", { length: 512 }).notNull(),
-  category: varchar("category", { length: 50 }).notNull(),
-  mimeType: varchar("mime_type", { length: 100 }),
-  uploadedAt: timestamp("uploaded_at").defaultNow(),
+// ============================================================================
+// INCOME & EXPENSES
+// ============================================================================
+
+export const rentalIncome = pgTable("rental_income", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate"),
+  amount: integer("amount").notNull(),
+  frequency: frequencyEnum("frequency").notNull(),
+  growthRate: integer("growthRate").default(0).notNull(),
 });
 
-export type Document = typeof documents.$inferSelect;
-export type InsertDocument = typeof documents.$inferInsert;
+export type RentalIncome = typeof rentalIncome.$inferSelect;
+export type InsertRentalIncome = typeof rentalIncome.$inferInsert;
 
-/**
- * Scenarios - stores hypothetical portfolio versions
- */
-export const scenarios = mysqlTable("scenarios", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  originalPortfolioId: int("originalPortfolioId"), // Link to source portfolio if cloned
+export const expenseLogs = pgTable("expense_logs", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  date: timestamp("date").notNull(),
+  totalAmount: integer("totalAmount").notNull(),
+  frequency: frequencyEnum("frequency").notNull(),
+  growthRate: integer("growthRate").default(0).notNull(),
+});
+
+export type ExpenseLog = typeof expenseLogs.$inferSelect;
+export type InsertExpenseLog = typeof expenseLogs.$inferInsert;
+
+export const expenseBreakdown = pgTable("expense_breakdown", {
+  id: serial("id").primaryKey(),
+  expenseLogId: integer("expenseLogId").notNull().references(() => expenseLogs.id, { onDelete: 'cascade' }),
+  category: varchar("category", { length: 255 }).notNull(),
+  amount: integer("amount").notNull(),
+});
+
+export type ExpenseBreakdown = typeof expenseBreakdown.$inferSelect;
+export type InsertExpenseBreakdown = typeof expenseBreakdown.$inferInsert;
+
+export const depreciationSchedule = pgTable("depreciation_schedule", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  asAtDate: timestamp("asAtDate").notNull(),
+  annualAmount: integer("annualAmount").notNull(),
+});
+
+export type DepreciationSchedule = typeof depreciationSchedule.$inferSelect;
+export type InsertDepreciationSchedule = typeof depreciationSchedule.$inferInsert;
+
+export const capitalExpenditure = pgTable("capital_expenditure", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 255 }).notNull(),
+  amount: integer("amount").notNull(),
+  date: timestamp("date").notNull(),
+});
+
+export type CapitalExpenditure = typeof capitalExpenditure.$inferSelect;
+export type InsertCapitalExpenditure = typeof capitalExpenditure.$inferInsert;
+
+// ============================================================================
+// SCENARIOS
+// ============================================================================
+
+export const scenarios = pgTable("scenarios", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  originalPortfolioId: integer("originalPortfolioId").references(() => portfolios.id, { onDelete: 'set null' }),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Scenario = typeof scenarios.$inferSelect;
 export type InsertScenario = typeof scenarios.$inferInsert;
 
-/**
- * Feedback - stores user feedback
- */
-export const feedback = mysqlTable("feedback", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId"),
-  userEmail: varchar("userEmail", { length: 320 }),
-  userName: varchar("userName", { length: 255 }),
-  category: mysqlEnum("category", ["Bug", "Feature Request", "General", "Complaint", "Praise", "Other"]).notNull(),
-  rating: int("rating"),
+// ============================================================================
+// EXTRA LOAN FEATURES
+// ============================================================================
+
+export const extraRepayments = pgTable("extra_repayments", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loanId").notNull().references(() => loans.id, { onDelete: 'cascade' }),
+  amount: integer("amount").notNull(),
+  frequency: frequencyEnum("frequency").notNull(),
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate"),
+});
+
+export type ExtraRepayment = typeof extraRepayments.$inferSelect;
+export type InsertExtraRepayment = typeof extraRepayments.$inferInsert;
+
+export const lumpSumPayments = pgTable("lump_sum_payments", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loanId").notNull().references(() => loans.id, { onDelete: 'cascade' }),
+  amount: integer("amount").notNull(),
+  paymentDate: timestamp("paymentDate").notNull(),
+});
+
+export type LumpSumPayment = typeof lumpSumPayments.$inferSelect;
+export type InsertLumpSumPayment = typeof lumpSumPayments.$inferInsert;
+
+export const interestRateForecasts = pgTable("interest_rate_forecasts", {
+  id: serial("id").primaryKey(),
+  loanId: integer("loanId").notNull().references(() => loans.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  startYear: integer("startYear").notNull(),
+  endYear: integer("endYear"),
+  forecastRate: integer("forecastRate").notNull(),
+});
+
+export type InterestRateForecast = typeof interestRateForecasts.$inferSelect;
+export type InsertInterestRateForecast = typeof interestRateForecasts.$inferInsert;
+
+// ============================================================================
+// FEEDBACK
+// ============================================================================
+
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: 'set null' }),
+  category: feedbackCategoryEnum("category").notNull(),
+  rating: integer("rating"),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
-  status: mysqlEnum("status", ["New", "In Progress", "Resolved", "Closed"]).default("New").notNull(),
-  source: varchar("source", { length: 50 }).notNull(),
+  userEmail: varchar("userEmail", { length: 320 }),
+  userName: varchar("userName", { length: 255 }),
+  source: varchar("source", { length: 50 }).notNull(), // 'in-app', 'tally', 'email'
+  status: feedbackStatusEnum("status").default('New').notNull(),
+  metadata: text("metadata"), // JSON string
   adminNotes: text("adminNotes"),
-  resolvedAt: datetime("resolvedAt"),
-  resolvedBy: int("resolvedBy"),
-  metadata: text("metadata"),
+  resolvedAt: timestamp("resolvedAt"),
+  resolvedBy: integer("resolvedBy").references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Feedback = typeof feedback.$inferSelect;
