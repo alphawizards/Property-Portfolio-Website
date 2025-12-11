@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SignedIn, SignedOut, RedirectToSignIn, ClerkProvider } from "@clerk/clerk-react"; //
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react"; //
 import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
 import Properties from "@/pages/Properties";
@@ -24,13 +24,6 @@ import { FeedbackWidget } from "./components/FeedbackWidget";
 // Lazy load Premium features
 const PremiumDashboard = lazy(() => import("@/pages/PremiumDashboard").then(m => ({ default: m.PremiumDashboard })));
 const PropertyWizard = lazy(() => import("@/pages/PropertyWizard").then(m => ({ default: m.PropertyWizard })));
-
-// 1. Get this from your Clerk Dashboard -> API Keys
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key");
-}
 
 // 2. A Wrapper to protect private routes
 function PrivateRoute({ component: Component }: { component: React.ComponentType<any> }) {
@@ -117,19 +110,17 @@ function Router() {
 
 function App() {
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <ErrorBoundary>
-        <ThemeProvider defaultTheme="light">
-          <ScenarioProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-              <FeedbackWidget />
-            </TooltipProvider>
-          </ScenarioProvider>
-        </ThemeProvider>
-      </ErrorBoundary>
-    </ClerkProvider>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="light">
+        <ScenarioProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+            <FeedbackWidget />
+          </TooltipProvider>
+        </ScenarioProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
