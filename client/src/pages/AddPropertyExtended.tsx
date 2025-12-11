@@ -11,6 +11,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useScenario } from "@/contexts/ScenarioContext";
+import { Badge } from "@/components/ui/badge";
 
 type LoanData = {
   securityProperty?: string;
@@ -109,6 +111,12 @@ const TOTAL_STEPS = 10;
 
 export default function AddPropertyExtended() {
   const [, setLocation] = useLocation();
+  const { currentScenarioId } = useScenario();
+  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const currentScenarioName = currentScenarioId
+    ? scenarios?.find(s => s.id === currentScenarioId)?.name
+    : null;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<PropertyFormData>({
     nickname: "",
@@ -184,7 +192,8 @@ export default function AddPropertyExtended() {
         linkedEntity: formData.linkedEntity,
         purchaseDate: formData.purchaseDate,
         purchasePrice: Math.round(formData.purchasePrice * 100),
-        status: formData.status,
+        status: currentScenarioId ? "Projected" : formData.status,
+        scenarioId: currentScenarioId ?? undefined,
       });
 
       const propertyId = property.id;
@@ -342,7 +351,7 @@ export default function AddPropertyExtended() {
       }
 
       await utils.properties.list.invalidate();
-      toast.success("Property created successfully!");
+      toast.success(currentScenarioId ? "Hypothetical property added!" : "Property created successfully!");
       setLocation(`/properties/${propertyId}`);
     } catch (error) {
       toast.error("Failed to create property");
@@ -1395,6 +1404,11 @@ export default function AddPropertyExtended() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <h1 className="text-2xl font-bold text-gray-900">Add New Property</h1>
+        {currentScenarioId && (
+          <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 mt-2">
+            Adding to Scenario: {currentScenarioName}
+          </Badge>
+        )}
       </header>
 
       <div className="container mx-auto py-8 max-w-4xl">
