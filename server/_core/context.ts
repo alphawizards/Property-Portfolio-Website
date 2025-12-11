@@ -15,8 +15,15 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
   let user = null;
 
   try {
-    const authHeader = req.headers.authorization;
-    const token = (typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : undefined) || (req.cookies as any)?.__session;
+    // 1. Check for Clerk Token in Authorization header or Cookie
+    // Clerk usually sends "Authorization: Bearer <token>"
+    // or a "__session" cookie.
+
+    // Explicitly cast to any to avoid TypeScript issues with Express Request types in some environments
+    const safeReq = req as any;
+
+    const authHeader = safeReq.headers?.authorization;
+    const token = (typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : undefined) || safeReq.cookies?.__session;
 
     if (token) {
       const session = await sessions.verifySession(token, process.env.CLERK_SECRET_KEY || "");
