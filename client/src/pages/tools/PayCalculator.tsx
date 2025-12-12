@@ -1,32 +1,52 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { DollarSign, ArrowRight, Wallet } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { DollarSign, ArrowRight, Wallet, Clock, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { Cell, Pie, PieChart as RechartsPie, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
+type Frequency = "Hourly" | "Daily" | "Weekly" | "Fortnightly" | "Monthly" | "Annually";
+
 export default function PayCalculator() {
-    const [salary, setSalary] = useState(90000);
+    // State Management
+    const [amount, setAmount] = useState<number>(90000);
+    const [frequency, setFrequency] = useState<Frequency>("Annually");
+    const [hoursPerWeek, setHoursPerWeek] = useState<number>(38);
+    const [daysPerWeek, setDaysPerWeek] = useState<number>(5);
     const [includesSuper, setIncludesSuper] = useState(false);
 
     const [results, setResults] = useState({
-        gross: 0,
-        tax: 0,
-        super: 0,
-        medicare: 0,
-        net: 0,
-        period: "Annually"
+        annualGross: 0,
+        annualTax: 0,
+        annualSuper: 0,
+        annualMedicare: 0,
+        annualNet: 0,
     });
 
     // ATO Tax Rates 2024-2025 (Stage 3 Cuts)
     const TAX_BRACKETS = [
         { limit: 18200, rate: 0, base: 0 },
-        { limit: 45000, rate: 0.16, base: 0 }, // Reduced from 19%
-        { limit: 135000, rate: 0.30, base: 4288 }, // Reduced from 32.5% and bracket expanded
+        { limit: 45000, rate: 0.16, base: 0 },
+        { limit: 135000, rate: 0.30, base: 4288 },
         { limit: 190000, rate: 0.37, base: 31288 },
         { limit: Infinity, rate: 0.45, base: 51638 }
     ];
@@ -36,59 +56,78 @@ export default function PayCalculator() {
 
     useEffect(() => {
         calculatePay();
-    }, [salary, includesSuper]);
+    }, [amount, frequency, hoursPerWeek, daysPerWeek, includesSuper]);
 
     const calculatePay = () => {
-        let grossPackage = salary;
-        let baseSalary = 0;
-        let superAmount = 0;
+        // 1. Normalize to Annual Gross Package first (Amount * Multiplier)
+        let annualGrossInput = 0;
 
-        if (includesSuper) {
-            // Package includes super: Salary = Package / (1 + SuperRate)
-            baseSalary = grossPackage / (1 + SUPER_RATE);
-            superAmount = grossPackage - baseSalary;
-        } else {
-            // Salary + Super
-            baseSalary = grossPackage;
-            superAmount = baseSalary * SUPER_RATE;
+        switch (frequency) {
+            case "Hourly":
+                annualGrossInput = amount * hoursPerWeek * 52;
+                break;
+            case "Daily":
+                annualGrossInput = amount * daysPerWeek * 52;
+                break;
+            case "Weekly":
+                annualGrossInput = amount * 52;
+                break;
+            case "Fortnightly":
+                annualGrossInput = amount * 26;
+                break;
+            case "Monthly":
+                annualGrossInput = amount * 12;
+                break;
+            case "Annually":
+                annualGrossInput = amount;
+                break;
         }
 
-        // Calculate Tax
-        let tax = 0;
-        let remaining = baseSalary;
+        let baseAnnualSalary = 0;
+        let annualSuperAmount = 0;
 
-        // Tax Calculation Logic
-        // We need to find which bracket fits
+        // 2. Handle Super Inclusive/Exclusive
+        if (includesSuper) {
+            // The input amount includes super, so we need to back it out
+            // Base = Total / (1 + Rate)
+            baseAnnualSalary = annualGrossInput / (1 + SUPER_RATE);
+            annualSuperAmount = annualGrossInput - baseAnnualSalary;
+        } else {
+            // The input is base salary, Super is on top
+            baseAnnualSalary = annualGrossInput;
+            annualSuperAmount = baseAnnualSalary * SUPER_RATE;
+        }
+
+        // 3. Calculate Tax on Base Annual Salary
+        let annualTax = 0;
+
         for (let i = 0; i < TAX_BRACKETS.length; i++) {
             const bracket = TAX_BRACKETS[i];
             const prevLimit = i === 0 ? 0 : TAX_BRACKETS[i - 1].limit;
 
-            if (baseSalary > prevLimit) {
-                // Check if salary is within this bracket or exceeds it
-                if (baseSalary <= bracket.limit) {
-                    tax = bracket.base + (baseSalary - prevLimit) * bracket.rate;
+            if (baseAnnualSalary > prevLimit) {
+                if (baseAnnualSalary <= bracket.limit) {
+                    annualTax = bracket.base + (baseAnnualSalary - prevLimit) * bracket.rate;
                     break;
                 } else if (i === TAX_BRACKETS.length - 1) {
-                    // Top bracket
-                    tax = bracket.base + (baseSalary - prevLimit) * bracket.rate;
+                    annualTax = bracket.base + (baseAnnualSalary - prevLimit) * bracket.rate;
                 }
             }
         }
 
-        // Medicare Levy (Simple approximation, omitting low income thresholds for simplicity)
-        const medicare = baseSalary * MEDICARE_RATE;
+        // Medicare Levy
+        const annualMedicare = baseAnnualSalary * MEDICARE_RATE;
 
-        // Total Tax
-        const totalTax = tax + medicare;
-        const net = baseSalary - totalTax;
+        // Total Tax & Net
+        const totalAnnualTax = annualTax + annualMedicare;
+        const annualNet = baseAnnualSalary - totalAnnualTax;
 
         setResults({
-            gross: baseSalary,
-            tax: tax,
-            medicare: medicare,
-            super: superAmount,
-            net: net,
-            period: "Annually"
+            annualGross: baseAnnualSalary,
+            annualTax: annualTax, // Keeping just income tax for display if needed, or total? Usually split.
+            annualMedicare: annualMedicare,
+            annualSuper: annualSuperAmount,
+            annualNet: annualNet
         });
     };
 
@@ -97,58 +136,117 @@ export default function PayCalculator() {
     };
 
     const chartData = [
-        { name: "Net Pay", value: results.net, color: "#22c55e" },
-        { name: "Tax", value: results.tax, color: "#ef4444" }, // Red
-        { name: "Medicare", value: results.medicare, color: "#f97316" }, // Orange
-        { name: "Super", value: results.super, color: "#3b82f6" } // Blue
+        { name: "Net Pay", value: results.annualNet, color: "#22c55e" }, // Green
+        { name: "Tax", value: results.annualTax, color: "#ef4444" }, // Red
+        { name: "Medicare", value: results.annualMedicare, color: "#f97316" }, // Orange
+        { name: "Super", value: results.annualSuper, color: "#3b82f6" } // Blue
+    ];
+
+    // Helper to generate matrix rows
+    const periods = [
+        { label: "Weekly", divisor: 52 },
+        { label: "Fortnightly", divisor: 26 },
+        { label: "Monthly", divisor: 12 },
+        { label: "Annually", divisor: 1 },
     ];
 
     return (
         <div className="min-h-screen bg-background pb-20 pt-10">
-            <div className="container mx-auto max-w-5xl px-4">
+            <div className="container mx-auto max-w-6xl px-4">
                 <div className="mb-10 text-center">
                     <h1 className="mb-4 text-5xl font-extrabold tracking-tight text-foreground flex items-center justify-center gap-3">
                         <Wallet className="h-12 w-12 text-primary" />
                         Pay Calculator
                     </h1>
                     <p className="text-xl text-muted-foreground">
-                        Project your take-home pay under the 2024-25 Stage 3 tax cuts.
+                        Determine your exact borrowing capacity with the Ultimate Pay Calculator.
                     </p>
                 </div>
 
                 <div className="grid gap-8 lg:grid-cols-12">
                     {/* Inputs Section */}
-                    <div className="lg:col-span-4 space-y-6">
+                    <div className="lg:col-span-5 space-y-6">
                         <Card>
                             <CardHeader>
                                 <CardTitle>Salary Details</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-6">
+                                {/* Amount & Frequency Group */}
                                 <div className="space-y-2">
-                                    <Label>Annual Salary</Label>
-                                    <div className="relative">
-                                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            type="number"
-                                            value={salary}
-                                            onChange={(e) => setSalary(Number(e.target.value))}
-                                            className="pl-9"
-                                        />
+                                    <Label>Income Amount</Label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                type="number"
+                                                value={amount}
+                                                onChange={(e) => setAmount(Number(e.target.value))}
+                                                className="pl-9"
+                                            />
+                                        </div>
+                                        <Select
+                                            value={frequency}
+                                            onValueChange={(val: Frequency) => setFrequency(val)}
+                                        >
+                                            <SelectTrigger className="w-[140px]">
+                                                <SelectValue placeholder="Frequency" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Hourly">Hourly</SelectItem>
+                                                <SelectItem value="Daily">Daily</SelectItem>
+                                                <SelectItem value="Weekly">Weekly</SelectItem>
+                                                <SelectItem value="Fortnightly">Fortnightly</SelectItem>
+                                                <SelectItem value="Monthly">Monthly</SelectItem>
+                                                <SelectItem value="Annually">Annually</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-                                    <Slider
-                                        value={[salary]}
-                                        min={20000}
-                                        max={300000}
-                                        step={1000}
-                                        onValueChange={(val) => setSalary(val[0])}
-                                        className="py-2"
-                                    />
                                 </div>
 
+                                {/* Dynamic Sliders */}
+                                {frequency === "Hourly" && (
+                                    <div className="space-y-4 pt-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="flex items-center gap-2">
+                                                <Clock className="h-4 w-4" /> Hours per Week
+                                            </Label>
+                                            <span className="font-mono font-medium">{hoursPerWeek} hrs</span>
+                                        </div>
+                                        <Slider
+                                            value={[hoursPerWeek]}
+                                            min={1}
+                                            max={80}
+                                            step={0.5}
+                                            onValueChange={(val) => setHoursPerWeek(val[0])}
+                                        />
+                                    </div>
+                                )}
+
+                                {frequency === "Daily" && (
+                                    <div className="space-y-4 pt-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="flex items-center gap-2">
+                                                <Calendar className="h-4 w-4" /> Days per Week
+                                            </Label>
+                                            <span className="font-mono font-medium">{daysPerWeek} days</span>
+                                        </div>
+                                        <Slider
+                                            value={[daysPerWeek]}
+                                            min={1}
+                                            max={7}
+                                            step={1}
+                                            onValueChange={(val) => setDaysPerWeek(val[0])}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Super Switch */}
                                 <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-secondary/10">
                                     <Label htmlFor="super-mode" className="flex flex-col space-y-1">
                                         <span>Includes Super?</span>
-                                        <span className="font-normal text-muted-foreground text-xs">Is this a Total Package?</span>
+                                        <span className="font-normal text-muted-foreground text-xs">
+                                            Is the amount above a "Total Package"?
+                                        </span>
                                     </Label>
                                     <Switch
                                         id="super-mode"
@@ -158,68 +256,69 @@ export default function PayCalculator() {
                                 </div>
 
                                 <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                                    ℹ️ Uses Stage 3 Tax Cut rates for 2024-25 FY.
+                                    ℹ️ 2024-25 Tax Rates (Stage 3 Cuts Applied)
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
 
                     {/* Results Section */}
-                    <div className="lg:col-span-8 space-y-6">
-                         <div className="grid grid-cols-2 gap-4">
-                            <Card className="bg-primary/5 border-primary/20">
-                                <CardContent className="p-6 text-center">
-                                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Annual Net Income</p>
-                                    <p className="mt-2 text-4xl font-bold text-primary">{formatCurrency(results.net)}</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="bg-primary/5 border-primary/20">
-                                <CardContent className="p-6 text-center">
-                                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Monthly Net</p>
-                                    <p className="mt-2 text-4xl font-bold text-primary">{formatCurrency(results.net / 12)}</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
+                    <div className="lg:col-span-7 space-y-6">
+                        {/* The Matrix Table */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Where does your money go?</CardTitle>
+                                <CardTitle>Pay Breakdown</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2">
-                                    <div className="p-6">
-                                        <div className="space-y-4 text-sm">
-                                            <div className="flex justify-between items-center p-2 rounded hover:bg-muted/50">
-                                                <span className="text-muted-foreground">Gross Salary</span>
-                                                <span className="font-medium">{formatCurrency(results.gross)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center p-2 rounded hover:bg-muted/50 text-red-600 dark:text-red-400">
-                                                <span>Tax Paid</span>
-                                                <span>- {formatCurrency(results.tax)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center p-2 rounded hover:bg-muted/50 text-orange-600 dark:text-orange-400">
-                                                <span>Medicare</span>
-                                                <span>- {formatCurrency(results.medicare)}</span>
-                                            </div>
-                                            <div className="border-t pt-3 flex justify-between items-center px-2 font-bold text-lg">
-                                                <span>Net Pay</span>
-                                                <span>{formatCurrency(results.net)}</span>
-                                            </div>
-                                            <div className="pt-3 flex justify-between items-center p-2 rounded bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400">
-                                                <span>Super (11.5%)</span>
-                                                <span>{formatCurrency(results.super)}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="h-[300px] p-4">
+                            <CardContent className="p-0 overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/50">
+                                            <TableHead className="w-[100px]">Period</TableHead>
+                                            <TableHead className="text-right">Gross</TableHead>
+                                            <TableHead className="text-right text-red-600 dark:text-red-400">Tax</TableHead>
+                                            <TableHead className="text-right text-blue-600 dark:text-blue-400">Super</TableHead>
+                                            <TableHead className="text-right font-bold text-green-600 dark:text-green-400">Net Pay</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {periods.map((period) => (
+                                            <TableRow key={period.label}>
+                                                <TableCell className="font-medium">{period.label}</TableCell>
+                                                <TableCell className="text-right">
+                                                    {formatCurrency(results.annualGross / period.divisor)}
+                                                </TableCell>
+                                                <TableCell className="text-right text-muted-foreground">
+                                                    {formatCurrency((results.annualTax + results.annualMedicare) / period.divisor)}
+                                                </TableCell>
+                                                <TableCell className="text-right text-muted-foreground">
+                                                    {formatCurrency(results.annualSuper / period.divisor)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold">
+                                                    {formatCurrency(results.annualNet / period.divisor)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+
+                        {/* Visual Breakdown */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Where does it go?</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                                    <div className="h-[250px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <RechartsPie>
                                                 <Pie
                                                     data={chartData}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={90}
+                                                    innerRadius={50}
+                                                    outerRadius={80}
                                                     paddingAngle={2}
                                                     dataKey="value"
                                                 >
@@ -228,9 +327,23 @@ export default function PayCalculator() {
                                                     ))}
                                                 </Pie>
                                                 <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                                                <Legend verticalAlign="bottom" height={36}/>
+                                                <Legend />
                                             </RechartsPie>
                                         </ResponsiveContainer>
+                                    </div>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between p-2 rounded bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900">
+                                            <span className="font-medium text-green-700 dark:text-green-400">Net Annual Pay</span>
+                                            <span className="font-bold text-green-700 dark:text-green-400">{formatCurrency(results.annualNet)}</span>
+                                        </div>
+                                        <div className="flex justify-between p-2 rounded bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900">
+                                            <span className="font-medium text-red-700 dark:text-red-400">Total Tax</span>
+                                            <span className="font-bold text-red-700 dark:text-red-400">{formatCurrency(results.annualTax + results.annualMedicare)}</span>
+                                        </div>
+                                        <div className="flex justify-between p-2 rounded bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900">
+                                            <span className="font-medium text-blue-700 dark:text-blue-400">Total Super</span>
+                                            <span className="font-bold text-blue-700 dark:text-blue-400">{formatCurrency(results.annualSuper)}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>
