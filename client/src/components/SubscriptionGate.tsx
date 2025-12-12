@@ -1,55 +1,62 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Lock } from "lucide-react";
-import { Link } from "wouter";
-import { ReactNode } from "react";
+import { useLocation } from "wouter";
+import { trackEvent } from "@/lib/analytics";
+import React, { useEffect } from "react";
 
 interface SubscriptionGateProps {
-    children: ReactNode;
+    children: React.ReactNode;
     featureName?: string;
 }
 
-export function SubscriptionGate({ children, featureName = "Premium features" }: SubscriptionGateProps) {
+export function SubscriptionGate({ children, featureName = "Premium Feature" }: SubscriptionGateProps) {
+    const [, setLocation] = useLocation();
     const { user } = useAuth();
 
     // Check if user has a premium subscription
     const isPremium = user?.tier === "PREMIUM_MONTHLY" || user?.tier === "PREMIUM_ANNUAL";
     const isAdmin = user?.role === "admin";
 
+    useEffect(() => {
+        if (!isPremium && !isAdmin) {
+            trackEvent("premium_gate_viewed", { feature: featureName });
+        }
+    }, [isPremium, isAdmin, featureName]);
+
     if (isPremium || isAdmin) {
         return <>{children}</>;
     }
 
+    const handleUpgrade = () => {
+        trackEvent("premium_upgrade_click", { feature: featureName });
+        setLocation("/pricing");
+    };
+
     return (
-        <div className="relative group">
+        <div className="relative">
             {/* Blurred Content */}
-            <div className="blur-sm pointer-events-none select-none opacity-50 transition-opacity duration-300" aria-hidden="true">
+            <div className="blur-sm pointer-events-none select-none opacity-50" aria-hidden="true">
                 {children}
             </div>
 
-            {/* Lock Overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-10">
-                <div className="bg-background/95 backdrop-blur-md border rounded-xl shadow-2xl p-8 max-w-sm w-full text-center space-y-6 animate-in fade-in zoom-in duration-300">
-                    <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-primary">
-                        <Lock className="w-8 h-8" />
+            {/* Overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/20 z-10 p-4 text-center">
+                <div className="bg-background/95 backdrop-blur shadow-lg border rounded-xl p-6 md:p-8 max-w-md space-y-4">
+                    <div className="h-12 w-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto">
+                        <Lock className="h-6 w-6" />
                     </div>
 
                     <div className="space-y-2">
-                        <h3 className="font-bold text-xl tracking-tight">Unlock {featureName}</h3>
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                            Upgrade your plan to access advanced analytics, unlimited properties, and AI-powered insights.
+                        <h3 className="font-bold text-lg">Premium Feature</h3>
+                        <p className="text-muted-foreground text-sm">
+                            Upgrade your plan to access {featureName} and unlock the full potential of your portfolio.
                         </p>
                     </div>
 
-                    <Link href="/pricing" className="block w-full">
-                        <Button className="w-full font-semibold shadow-lg hover:shadow-primary/25 transition-all" size="lg">
-                            Upgrade to Premium
-                        </Button>
-                    </Link>
-
-                    <p className="text-xs text-muted-foreground">
-                        Starting at just $19/month
-                    </p>
+                    <Button onClick={handleUpgrade} className="w-full font-semibold size-lg">
+                        Upgrade to Premium
+                    </Button>
                 </div>
             </div>
         </div>
