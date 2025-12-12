@@ -9,6 +9,7 @@ import { injectSpeedInsights } from "@vercel/speed-insights";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+import { ClerkProvider } from "@clerk/clerk-react";
 
 // Initialize Vercel Speed Insights
 injectSpeedInsights();
@@ -57,22 +58,40 @@ const trpcClient = trpc.createClient({
   ],
 });
 
-import { ClerkProvider } from "@clerk/clerk-react";
-
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
-}
+const rootElement = document.getElementById("root");
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </trpc.Provider>
-    </ClerkProvider>
-  </StrictMode>
-);
+if (rootElement) {
+  if (!PUBLISHABLE_KEY) {
+    createRoot(rootElement).render(
+      <div style={{
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#f9fafb',
+        color: '#1f2937',
+        textAlign: 'center',
+        padding: '20px'
+      }}>
+        <h1 style={{ marginBottom: '16px', fontSize: '24px', fontWeight: 'bold' }}>Configuration Error</h1>
+        <p style={{ color: '#4b5563' }}>Missing Clerk Publishable Key. Please check Vercel Environment Variables.</p>
+      </div>
+    );
+  } else {
+    createRoot(rootElement).render(
+      <StrictMode>
+        <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+          <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+              <App />
+            </QueryClientProvider>
+          </trpc.Provider>
+        </ClerkProvider>
+      </StrictMode>
+    );
+  }
+}
