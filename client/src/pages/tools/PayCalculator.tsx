@@ -5,9 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { DollarSign, ArrowRight, PieChart } from "lucide-react";
+import { DollarSign, ArrowRight, Wallet } from "lucide-react";
 import { Link } from "wouter";
-import { Cell, Pie, PieChart as RechartsPie, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart as RechartsPie, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 export default function PayCalculator() {
     const [salary, setSalary] = useState(90000);
@@ -98,138 +98,152 @@ export default function PayCalculator() {
 
     const chartData = [
         { name: "Net Pay", value: results.net, color: "#22c55e" },
-        { name: "Tax", value: results.tax, color: "#nf43f5e" }, // Red-ish
+        { name: "Tax", value: results.tax, color: "#ef4444" }, // Red
         { name: "Medicare", value: results.medicare, color: "#f97316" }, // Orange
         { name: "Super", value: results.super, color: "#3b82f6" } // Blue
     ];
 
     return (
         <div className="min-h-screen bg-background pb-20 pt-10">
-            <div className="container mx-auto max-w-4xl px-4">
+            <div className="container mx-auto max-w-5xl px-4">
                 <div className="mb-10 text-center">
-                    <h1 className="mb-4 text-4xl font-bold tracking-tight text-foreground">
-                        Pay Calculator (2024-25)
+                    <h1 className="mb-4 text-5xl font-extrabold tracking-tight text-foreground flex items-center justify-center gap-3">
+                        <Wallet className="h-12 w-12 text-primary" />
+                        Pay Calculator
                     </h1>
                     <p className="text-xl text-muted-foreground">
-                        Calculate your take-home pay with the latest tax cuts.
+                        Project your take-home pay under the 2024-25 Stage 3 tax cuts.
                     </p>
                 </div>
 
-                <div className="grid gap-8 lg:grid-cols-5">
+                <div className="grid gap-8 lg:grid-cols-12">
                     {/* Inputs Section */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Your Salary</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <Label>Annual Salary</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        type="number"
-                                        value={salary}
-                                        onChange={(e) => setSalary(Number(e.target.value))}
-                                        className="pl-9"
+                    <div className="lg:col-span-4 space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Salary Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label>Annual Salary</Label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            type="number"
+                                            value={salary}
+                                            onChange={(e) => setSalary(Number(e.target.value))}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <Slider
+                                        value={[salary]}
+                                        min={20000}
+                                        max={300000}
+                                        step={1000}
+                                        onValueChange={(val) => setSalary(val[0])}
+                                        className="py-2"
                                     />
                                 </div>
-                                <Slider
-                                    value={[salary]}
-                                    min={20000}
-                                    max={300000}
-                                    step={1000}
-                                    onValueChange={(val) => setSalary(val[0])}
-                                    className="py-2"
-                                />
-                            </div>
 
-                            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-                                <Label htmlFor="super-mode" className="flex flex-col space-y-1">
-                                    <span>Includes Super?</span>
-                                    <span className="font-normal text-muted-foreground">Is this a Total Package?</span>
-                                </Label>
-                                <Switch
-                                    id="super-mode"
-                                    checked={includesSuper}
-                                    onCheckedChange={setIncludesSuper}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-secondary/10">
+                                    <Label htmlFor="super-mode" className="flex flex-col space-y-1">
+                                        <span>Includes Super?</span>
+                                        <span className="font-normal text-muted-foreground text-xs">Is this a Total Package?</span>
+                                    </Label>
+                                    <Switch
+                                        id="super-mode"
+                                        checked={includesSuper}
+                                        onCheckedChange={setIncludesSuper}
+                                    />
+                                </div>
+
+                                <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                                    ℹ️ Uses Stage 3 Tax Cut rates for 2024-25 FY.
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
                     {/* Results Section */}
-                    <Card className="lg:col-span-3 border-primary/10">
-                        <CardContent className="p-0">
-                            <div className="grid grid-cols-2 divide-x border-b">
-                                <div className="p-6 text-center">
-                                    <p className="text-sm font-medium text-muted-foreground">Annual Net Income</p>
-                                    <p className="mt-2 text-3xl font-bold text-fintech-growth">{formatCurrency(results.net)}</p>
-                                </div>
-                                <div className="p-6 text-center">
-                                    <p className="text-sm font-medium text-muted-foreground">Monthly Net</p>
-                                    <p className="mt-2 text-3xl font-bold text-fintech-growth">{formatCurrency(results.net / 12)}</p>
-                                </div>
-                            </div>
+                    <div className="lg:col-span-8 space-y-6">
+                         <div className="grid grid-cols-2 gap-4">
+                            <Card className="bg-primary/5 border-primary/20">
+                                <CardContent className="p-6 text-center">
+                                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Annual Net Income</p>
+                                    <p className="mt-2 text-4xl font-bold text-primary">{formatCurrency(results.net)}</p>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-primary/5 border-primary/20">
+                                <CardContent className="p-6 text-center">
+                                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Monthly Net</p>
+                                    <p className="mt-2 text-4xl font-bold text-primary">{formatCurrency(results.net / 12)}</p>
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2">
-                                <div className="p-6">
-                                    <h3 className="font-semibold mb-4">Breakdown</h3>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Gross Salary</span>
-                                            <span>{formatCurrency(results.gross)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-red-500">
-                                            <span>Tax Paid</span>
-                                            <span>- {formatCurrency(results.tax)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-orange-500">
-                                            <span>Medicare</span>
-                                            <span>- {formatCurrency(results.medicare)}</span>
-                                        </div>
-                                        <div className="border-t pt-2 flex justify-between font-bold">
-                                            <span>Net Pay</span>
-                                            <span>{formatCurrency(results.net)}</span>
-                                        </div>
-                                        <div className="pt-2 flex justify-between text-blue-500">
-                                            <span>Super (11.5%)</span>
-                                            <span>{formatCurrency(results.super)}</span>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Where does your money go?</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2">
+                                    <div className="p-6">
+                                        <div className="space-y-4 text-sm">
+                                            <div className="flex justify-between items-center p-2 rounded hover:bg-muted/50">
+                                                <span className="text-muted-foreground">Gross Salary</span>
+                                                <span className="font-medium">{formatCurrency(results.gross)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-2 rounded hover:bg-muted/50 text-red-600 dark:text-red-400">
+                                                <span>Tax Paid</span>
+                                                <span>- {formatCurrency(results.tax)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center p-2 rounded hover:bg-muted/50 text-orange-600 dark:text-orange-400">
+                                                <span>Medicare</span>
+                                                <span>- {formatCurrency(results.medicare)}</span>
+                                            </div>
+                                            <div className="border-t pt-3 flex justify-between items-center px-2 font-bold text-lg">
+                                                <span>Net Pay</span>
+                                                <span>{formatCurrency(results.net)}</span>
+                                            </div>
+                                            <div className="pt-3 flex justify-between items-center p-2 rounded bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400">
+                                                <span>Super (11.5%)</span>
+                                                <span>{formatCurrency(results.super)}</span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <div className="h-[300px] p-4">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <RechartsPie>
+                                                <Pie
+                                                    data={chartData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={90}
+                                                    paddingAngle={2}
+                                                    dataKey="value"
+                                                >
+                                                    {chartData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                                                <Legend verticalAlign="bottom" height={36}/>
+                                            </RechartsPie>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
-                                <div className="h-[250px] p-4">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <RechartsPie>
-                                            <Pie
-                                                data={chartData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                            >
-                                                <Cell key="net" fill="#22c55e" />
-                                                <Cell key="tax" fill="#ef4444" />
-                                                <Cell key="medicare" fill="#f97316" />
-                                                <Cell key="super" fill="#3b82f6" />
-                                            </Pie>
-                                            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                                        </RechartsPie>
-                                    </ResponsiveContainer>
-                                    <div className="text-center text-xs text-muted-foreground -mt-4">Distribution</div>
-                                </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            <div className="p-6 bg-secondary/20">
-                                <Link href="/dashboard">
-                                    <Button className="w-full gap-2" size="lg">
-                                        Analyze My Portfolio with Net Pay <ArrowRight className="h-4 w-4" />
-                                    </Button>
-                                </Link>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        <div className="flex justify-end">
+                             <Link href="/dashboard">
+                                <Button variant="outline" className="gap-2">
+                                    Return to Dashboard <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

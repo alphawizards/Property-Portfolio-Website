@@ -18,6 +18,9 @@ import {
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users, Plus, GitBranch, Building2, PieChart, FileText, CreditCard, Settings } from "lucide-react";
@@ -32,10 +35,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+const mainMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Users, label: "Properties", path: "/properties" },
   { icon: GitBranch, label: "Comparison", path: "/comparison" },
+];
+
+const toolMenuItems = [
+  { icon: Calculator, label: "Mortgage Monster", path: "/tools/mortgage-calculator" },
+  { icon: Wallet, label: "Pay Calculator", path: "/tools/pay-calculator" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -96,7 +104,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const activeMenuItem = [...mainMenuItems, ...toolMenuItems].find(item => item.path === location);
   const isMobile = useIsMobile();
 
   // Scenario Logic
