@@ -412,6 +412,7 @@ export const appRouter = router({
         });
         return { id: propertyId };
       } catch (error: any) {
+        console.error("FAILED TO CREATE WIZARD PROPERTY:", error);
         console.error("DB Error:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
