@@ -1,6 +1,9 @@
 
 import { COOKIE_NAME } from "../shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
+// ... types and schemas ...
+import {
+  wizardPropertySchema
+} from "../shared/schemas";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as Database from "./db";
@@ -395,6 +398,24 @@ export const appRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to create property: ${error.message} (Mock Mode: ${isMock()})`,
+          cause: error,
+        });
+      }
+    }),
+
+    createWizard: protectedProcedure.input(wizardPropertySchema).mutation(async ({ input, ctx }) => {
+      try {
+        console.log("Received input:", input);
+        const propertyId = await db.createPropertyFromWizard({
+          ...input,
+          userId: ctx.user.id, // Inject userId from context
+        });
+        return { id: propertyId };
+      } catch (error: any) {
+        console.error("DB Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create property via wizard: ${error.message}`,
           cause: error,
         });
       }

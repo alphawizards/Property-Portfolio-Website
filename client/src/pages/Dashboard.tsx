@@ -16,7 +16,12 @@ import { useScenario } from "@/contexts/ScenarioContext";
 import { formatCurrency } from "@/lib/utils";
 import { ProjectionsTable } from "@/components/projections-table";
 import { AssetList } from "@/components/dashboard/AssetList";
+import { AssetList } from "@/components/dashboard/AssetList";
 import { LiabilityList } from "@/components/dashboard/LiabilityList";
+import { InteractiveGraph } from "@/components/dashboard/InteractiveGraph";
+import { YearlySnapshot } from "@/components/dashboard/YearlySnapshot";
+import { DataDrillDown } from "@/components/dashboard/DataDrillDown";
+import { useMemo } from "react";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -606,188 +611,24 @@ export default function Dashboard() {
           </Card>
         </motion.div> {/* End Chart Controls */}
 
-        {/* Data Deck Tabs */}
-        {chartData.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-          >
-            <Tabs defaultValue="financials" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <TabsList>
-                  <TabsTrigger value="financials" className="gap-2"><TrendingUp className="h-4 w-4" /> Financials</TabsTrigger>
-                  <TabsTrigger value="finances" className="gap-2"><DollarSign className="h-4 w-4" /> Finances</TabsTrigger>
-                  <TabsTrigger value="properties" className="gap-2"><Building2 className="h-4 w-4" /> Properties</TabsTrigger>
-                  <TabsTrigger value="loans" className="gap-2"><Calculator className="h-4 w-4" /> Loans</TabsTrigger>
-                  <TabsTrigger value="cashflow" className="gap-2"><ArrowUpRight className="h-4 w-4" /> Cashflow</TabsTrigger>
-                </TabsList>
-              </div>
+        {/* New Interactive Dashboard Layout */}
+        <div className="space-y-6">
+          <InteractiveGraph
+            projections={projections?.map(p => ({ ...p })) || []} // Pass plain array
+            selectedYear={selectedYears}
+            onYearSelect={setSelectedYears}
+            isLoading={!projections}
+          />
 
-              <TabsContent value="financials" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detailed Projections</CardTitle>
-                    <CardDescription>Year-by-year financial forecast</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ProjectionsTable data={chartData} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+          {selectedYears && projections && (
+            <YearlySnapshot
+              selectedYear={selectedYears}
+              data={projections.find(p => p.year === selectedYears) || projections[0]}
+            />
+          )}
 
-              <TabsContent value="finances" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <AssetList />
-                  <LiabilityList />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="properties" className="space-y-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle>Your Properties</CardTitle>
-                      <CardDescription>Manage your portfolio</CardDescription>
-                    </div>
-                    <Link href="/properties/new">
-                      <Button size="sm" className="gap-2">
-                        <Plus className="h-4 w-4" /> Add New
-                      </Button>
-                    </Link>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {properties?.map((property, index) => (
-                        <motion.div
-                          key={property.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <Link href={`/properties/${property.id}`}>
-                            <div className="group flex items-center justify-between rounded-lg border p-4 transition-colors hover:border-fintech-growth hover:bg-accent/50 cursor-pointer">
-                              <div className="flex items-center gap-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fintech-growth/10">
-                                  <Building2 className="h-6 w-6 text-fintech-growth" />
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold">{property.nickname}</h3>
-                                  <p className="text-sm text-muted-foreground">{property.address}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-6">
-                                <div className="text-right hidden md:block">
-                                  <div className="flex gap-6">
-                                    <div>
-                                      <p className="mb-1 text-xs text-muted-foreground">Value</p>
-                                      <p className="font-mono font-semibold">{formatCurrency(property.currentValue)}</p>
-                                    </div>
-                                    <div>
-                                      <p className="mb-1 text-xs text-muted-foreground">Equity</p>
-                                      <p className="font-mono font-semibold text-fintech-growth">{formatCurrency(property.equity)}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
-                                  onClick={(e) => handleDeleteClick(e, property.id, property.nickname)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </Link>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="loans" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Loan Portfolio</CardTitle>
-                    <CardDescription>Consolidated view of all debt instruments</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="rounded-md border">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50">
-                          <tr className="text-left">
-                            <th className="p-4 font-medium">Property</th>
-                            <th className="p-4 font-medium">Lender</th>
-                            <th className="p-4 font-medium">Balance</th>
-                            <th className="p-4 font-medium">Rate</th>
-                            <th className="p-4 font-medium">Type</th>
-                            <th className="p-4 font-medium">Monthly P&I</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {properties?.map(p => (
-                            <tr key={p.id} className="border-t">
-                              <td className="p-4 font-medium">{p.nickname}</td>
-                              <td className="p-4">Primary Lender</td> {/* Placeholder until loan schema exp */}
-                              <td className="p-4 text-fintech-debt">{formatCurrency(p.totalDebt)}</td>
-                              <td className="p-4">6.10%</td> {/* Placeholder */}
-                              <td className="p-4"><span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold">Variable</span></td>
-                              <td className="p-4">{formatCurrency(p.totalDebt * 0.007)}</td> {/* Rough calc */}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="cashflow" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Cashflow Analysis</CardTitle>
-                    <CardDescription>Monthly incoming and outgoing breakdown</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {properties?.map(p => (
-                        <Card key={p.id} className="bg-muted/30">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-base">{p.nickname}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span>Rental Income</span>
-                                <span className="text-fintech-growth">+{formatCurrency(p.currentValue * 0.04 / 12)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Expenses</span>
-                                <span className="text-fintech-debt">-{formatCurrency(p.currentValue * 0.01 / 12)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Loan Repayments</span>
-                                <span className="text-fintech-debt">-{formatCurrency(p.totalDebt * 0.07 / 12)}</span>
-                              </div>
-                              <div className="border-t pt-2 flex justify-between font-bold">
-                                <span>Net Monthly</span>
-                                <span className={(p.currentValue * 0.04 / 12 - p.currentValue * 0.01 / 12 - p.totalDebt * 0.07 / 12) > 0 ? "text-fintech-growth" : "text-fintech-debt"}>
-                                  {formatCurrency(p.currentValue * 0.04 / 12 - p.currentValue * 0.01 / 12 - p.totalDebt * 0.07 / 12)}
-                                </span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </motion.div>
-        )}
+          <DataDrillDown properties={properties || []} />
+        </div>
       </div> {/* End container */}
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -810,7 +651,7 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </div >
   );
 }
 
