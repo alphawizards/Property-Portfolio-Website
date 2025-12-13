@@ -10,7 +10,7 @@ import { Sparkles, ArrowRight, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-r
 import { toast } from 'sonner';
 import { useScenario } from "@/contexts/ScenarioContext";
 import { Badge } from "@/components/ui/badge";
-import { wizardPropertySchema, WizardPropertyFormData } from '../../../../shared/schemas';
+import { wizardPropertySchema, WizardPropertyFormData } from '../../../shared/schemas';
 import { Step1Details } from '@/components/properties/wizard-steps/Step1Details';
 import { Step2Usage } from '@/components/properties/wizard-steps/Step2Usage';
 import { Step3Financials } from '@/components/properties/wizard-steps/Step3Financials';
