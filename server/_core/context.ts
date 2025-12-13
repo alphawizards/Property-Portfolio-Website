@@ -97,12 +97,7 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
   return { req, res, user };
 }
 
-// For Fetch (Vercel Edge/Serverless)
-export async function createFetchContext(opts: FetchCreateContextFnOptions): Promise<TrpcContext> {
-  const { req, resHeaders } = opts;
-  const user = await getUserFromRequest(req);
-  return { req, user };
-}
+
 
 export async function createFetchContext(opts: FetchCreateContextFnOptions): Promise<TrpcContext> {
   const { req, resHeaders } = opts;
