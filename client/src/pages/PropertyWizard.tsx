@@ -28,8 +28,13 @@ export function PropertyWizard() {
   const utils = trpc.useUtils();
   const [currentStep, setCurrentStep] = useState(1);
 
-  const methods = useForm<WizardPropertyFormData>({
-    resolver: zodResolver(wizardPropertySchema),
+  const { data: scenarios } = trpc.scenarios.list.useQuery(undefined);
+  const currentScenarioName = currentScenarioId
+    ? scenarios?.find(s => s.id === currentScenarioId)?.name
+    : null;
+
+  const form = useForm<PropertyFormValues>({
+    resolver: zodResolver(propertySchema),
     defaultValues: {
       nickname: "",
       address: "",

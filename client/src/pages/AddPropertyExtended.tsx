@@ -112,7 +112,7 @@ const TOTAL_STEPS = 10;
 export default function AddPropertyExtended() {
   const [, setLocation] = useLocation();
   const { currentScenarioId } = useScenario();
-  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const { data: scenarios } = trpc.scenarios.list.useQuery(undefined);
   const currentScenarioName = currentScenarioId
     ? scenarios?.find(s => s.id === currentScenarioId)?.name
     : null;
