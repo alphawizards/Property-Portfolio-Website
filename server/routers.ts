@@ -29,9 +29,9 @@ const propertySchema = z.object({
   ownershipStructure: z.enum(["Trust", "Individual", "Company", "Partnership"]),
   linkedEntity: z.string().optional(),
   purchaseDate: z.date(),
-  purchasePrice: z.number().int().positive("Purchase price must be positive"),
+  purchasePrice: z.number().int().min(0, "Purchase price must be positive"),
   saleDate: z.date().optional(),
-  salePrice: z.number().int().positive().optional(),
+  salePrice: z.number().int().min(0).optional(),
   status: z.enum(["Actual", "Projected"]),
   scenarioId: z.number().int().optional(),
 });
@@ -62,9 +62,9 @@ const loanSchema = z.object({
   loanPurpose: z.enum(["PropertyPurchase", "Renovation", "Investment", "Other"]),
   loanStructure: z.enum(["InterestOnly", "PrincipalAndInterest"]),
   startDate: z.date(),
-  originalAmount: z.number().int().positive("Original amount must be positive"),
-  currentAmount: z.number().int().positive("Current amount must be positive"),
-  interestRate: z.number().int().positive("Interest rate must be positive"),
+  originalAmount: z.number().int().min(0, "Original amount must be positive"),
+  currentAmount: z.number().int().min(0, "Current amount must be positive"),
+  interestRate: z.number().int().min(0, "Interest rate must be positive"),
   remainingTermYears: z.number().int().min(0, "Remaining term cannot be negative"),
   remainingIOPeriodYears: z.number().int().min(0).default(0),
   repaymentFrequency: z.enum(["Monthly", "Fortnightly", "Weekly"]),
@@ -72,7 +72,7 @@ const loanSchema = z.object({
 
 const valuationSchema = z.object({
   valuationDate: z.date(),
-  value: z.number().int().positive("Value must be positive"),
+  value: z.number().int().min(0, "Value must be positive"),
 });
 
 const growthRatePeriodSchema = z.object({
@@ -84,39 +84,39 @@ const growthRatePeriodSchema = z.object({
 const rentalIncomeSchema = z.object({
   startDate: z.date(),
   endDate: z.date().optional(),
-  amount: z.number().int().positive("Amount must be positive"),
+  amount: z.number().int().min(0, "Amount must be positive"),
   frequency: z.enum(["Monthly", "Weekly", "Fortnightly"]),
   growthRate: z.number().int().default(0),
 });
 
 const expenseLogSchema = z.object({
   date: z.date(),
-  totalAmount: z.number().int().positive("Total amount must be positive"),
+  totalAmount: z.number().int().min(0, "Total amount must be positive"),
   frequency: z.enum(["Monthly", "Annual", "OneTime"]),
   growthRate: z.number().int().default(0),
 });
 
 const expenseBreakdownSchema = z.object({
   category: z.string().min(1, "Category is required"),
-  amount: z.number().int().positive("Amount must be positive"),
+  amount: z.number().int().min(0, "Amount must be positive"),
   frequency: z.enum(["Weekly", "Monthly", "Quarterly", "Annually"]).default("Annually"),
 });
 
 const depreciationScheduleSchema = z.object({
   asAtDate: z.date(),
-  annualAmount: z.number().int().positive("Annual amount must be positive"),
+  annualAmount: z.number().int().min(0, "Annual amount must be positive"),
 });
 
 const capitalExpenditureSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  amount: z.number().int().positive("Amount must be positive"),
+  amount: z.number().int().min(0, "Amount must be positive"),
   date: z.date(),
 });
 
 const portfolioGoalSchema = z.object({
   goalYear: z.number().int().min(new Date().getFullYear(), "Goal year must be in the future"),
-  targetEquity: z.number().int().positive("Target equity must be positive"),
-  targetValue: z.number().int().positive("Target value must be positive"),
+  targetEquity: z.number().int().min(0, "Target equity must be positive"),
+  targetValue: z.number().int().min(0, "Target value must be positive"),
 });
 
 // ============ ROUTERS ============
@@ -359,11 +359,20 @@ export const appRouter = router({
     }),
 
     create: protectedProcedure.input(propertySchema).mutation(async ({ input, ctx }) => {
-      const propertyId = await db.createProperty({
-        ...input,
-        userId: ctx.user.id,
-      });
-      return { id: propertyId };
+      try {
+        const propertyId = await db.createProperty({
+          ...input,
+          userId: ctx.user.id,
+        });
+        return { id: propertyId };
+      } catch (error: any) {
+        console.error("FAILED TO CREATE PROPERTY:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create property: ${error.message}`,
+          cause: error,
+        });
+      }
     }),
 
     update: protectedProcedure
