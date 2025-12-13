@@ -70,11 +70,19 @@ export const authRouter = router({
 
             // 4. Set Cookie
             if (ctx.res) {
-                const cookieOptions = getSessionCookieOptions(ctx.req as any);
-                (ctx.res as any).cookie(COOKIE_NAME, sessionToken, {
-                    ...cookieOptions,
-                    maxAge: ONE_YEAR_MS,
-                });
+                 // Check if it's an Express response (has .cookie method)
+                if (typeof (ctx.res as any).cookie === 'function') {
+                    const cookieOptions = getSessionCookieOptions(ctx.req as any);
+                    (ctx.res as any).cookie(COOKIE_NAME, sessionToken, {
+                        ...cookieOptions,
+                        maxAge: ONE_YEAR_MS,
+                    });
+                }
+                // Fallback for standard Fetch/Node Response (has .setHeader)
+                else if (typeof (ctx.res as any).setHeader === 'function') {
+                    const cookieString = `${COOKIE_NAME}=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${ONE_YEAR_MS / 1000}`;
+                    (ctx.res as any).setHeader('Set-Cookie', cookieString);
+                }
             }
 
             return { success: true, user };
@@ -134,11 +142,20 @@ export const authRouter = router({
 
     logout: publicProcedure.mutation(async ({ ctx }) => {
         if (ctx.res) {
-            const cookieOptions = getSessionCookieOptions(ctx.req as any);
-            (ctx.res as any).clearCookie(COOKIE_NAME, {
-                ...cookieOptions,
-                maxAge: -1,
-            });
+             // Handle Express-like Response objects (with clearCookie)
+            if (typeof (ctx.res as any).clearCookie === 'function') {
+                 const cookieOptions = getSessionCookieOptions(ctx.req as any);
+                 (ctx.res as any).clearCookie(COOKIE_NAME, {
+                    ...cookieOptions,
+                    maxAge: -1,
+                });
+            }
+            // Handle standard Fetch/Node Response (setHeader)
+            else if (typeof (ctx.res as any).setHeader === 'function') {
+                // To delete a cookie, set Max-Age to 0 or Expires to a past date
+                const cookieString = `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+                (ctx.res as any).setHeader('Set-Cookie', cookieString);
+            }
         }
         return { success: true };
     }),

@@ -112,7 +112,7 @@ function DashboardLayoutContent({
   const [isCreateScenarioOpen, setIsCreateScenarioOpen] = useState(false);
   const [newScenarioName, setNewScenarioName] = useState("");
 
-  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const { data: scenarios } = trpc.scenarios.list.useQuery(undefined);
   const utils = trpc.useUtils();
 
   const createScenarioMutation = trpc.scenarios.clone.useMutation({

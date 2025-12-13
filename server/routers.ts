@@ -139,17 +139,17 @@ export const appRouter = router({
         portfolioId: z.number().int().optional(),
         scenarioId: z.number().int().optional(),
         interestRateOffset: z.number().int().optional()
-      }))
+      }).nullable().optional())
       .query(async ({ input, ctx }) => {
         let properties;
-        if (input.portfolioId) {
+        if (input?.portfolioId) {
           const portfolio = await db.getPortfolioById(input.portfolioId);
           if (!portfolio || portfolio.userId !== ctx.user.id) {
             throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this portfolio" });
           }
           properties = await db.getPropertiesByPortfolioId(input.portfolioId);
         } else {
-          const scenarioId = input.scenarioId ?? null;
+          const scenarioId = input?.scenarioId ?? null;
           properties = await db.getPropertiesByUserId(ctx.user.id, scenarioId);
         }
 
@@ -174,7 +174,7 @@ export const appRouter = router({
               data.valuations,
               data.growthRates,
               currentYear,
-              input.interestRateOffset ?? 0
+              input?.interestRateOffset ?? 0
             );
 
             return {
@@ -271,7 +271,9 @@ export const appRouter = router({
 
   // ============ SCENARIO OPERATIONS ============
   scenarios: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
+    list: protectedProcedure
+      .input(z.any().optional()) // Allow any input or undefined, ignore it as it's just a list call
+      .query(async ({ ctx }) => {
       return await db.getScenariosByUserId(ctx.user.id);
     }),
 
@@ -290,14 +292,14 @@ export const appRouter = router({
   // ============ PROPERTY OPERATIONS ============
   properties: router({
     list: protectedProcedure
-      .input(z.object({ scenarioId: z.number().int().optional() }).optional())
+      .input(z.object({ scenarioId: z.number().int().optional() }).nullable().optional())
       .query(async ({ input, ctx }) => {
         const scenarioId = input?.scenarioId ?? null;
         return await db.getPropertiesByUserId(ctx.user.id, scenarioId);
       }),
 
     listWithFinancials: protectedProcedure
-      .input(z.object({ scenarioId: z.number().int().optional() }).optional())
+      .input(z.object({ scenarioId: z.number().int().optional() }).nullable().optional())
       .query(async ({ input, ctx }) => {
         const scenarioId = input?.scenarioId ?? null;
         const properties = await db.getPropertiesByUserId(ctx.user.id, scenarioId);
