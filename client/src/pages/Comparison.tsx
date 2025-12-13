@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 
 export default function Comparison() {
   const { currentScenarioId } = useScenario();
-  const { data: scenarios } = trpc.scenarios.list.useQuery();
+  const { data: scenarios } = trpc.scenarios.list.useQuery(undefined);
   const currentYear = new Date().getFullYear();
   const projectionYears = 30;
 
