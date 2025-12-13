@@ -60,7 +60,7 @@ export const db = globalForDb.conn ?? drizzle(client, { schema });
 if (process.env.NODE_ENV !== "production") globalForDb.conn = db;
 
 // Helper to check if mock mode is active
-const isMock = () => process.env.ENABLE_MOCK_DATA === "true";
+export const isMock = () => process.env.ENABLE_MOCK_DATA === "true";
 
 // ============ USER OPERATIONS ============
 
