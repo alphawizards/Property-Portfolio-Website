@@ -135,7 +135,7 @@ export const authRouter = router({
     logout: publicProcedure.mutation(async ({ ctx }) => {
         if (ctx.res) {
             const cookieOptions = getSessionCookieOptions(ctx.req as any);
-            ctx.res.clearCookie(COOKIE_NAME, {
+            (ctx.res as any).clearCookie(COOKIE_NAME, {
                 ...cookieOptions,
                 maxAge: -1,
             });
