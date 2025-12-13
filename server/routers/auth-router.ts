@@ -68,13 +68,10 @@ export const authRouter = router({
                 expiresInMs: ONE_YEAR_MS,
             });
 
-            // 4. Set Cookie
-            if (ctx.res) {
-                const cookieOptions = getSessionCookieOptions(ctx.req as any);
-                (ctx.res as any).cookie(COOKIE_NAME, sessionToken, {
-                    ...cookieOptions,
-                    maxAge: ONE_YEAR_MS,
-                });
+            // 4. Set Cookie (Standardized Header Logic)
+            if (ctx.res && typeof (ctx.res as any).setHeader === 'function') {
+                const cookieString = `${COOKIE_NAME}=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${ONE_YEAR_MS / 1000}`;
+                (ctx.res as any).setHeader('Set-Cookie', cookieString);
             }
 
             return { success: true, user };
@@ -133,12 +130,10 @@ export const authRouter = router({
     }),
 
     logout: publicProcedure.mutation(async ({ ctx }) => {
-        if (ctx.res) {
-            const cookieOptions = getSessionCookieOptions(ctx.req as any);
-            (ctx.res as any).clearCookie(COOKIE_NAME, {
-                ...cookieOptions,
-                maxAge: -1,
-            });
+        if (ctx.res && typeof (ctx.res as any).setHeader === 'function') {
+            // To delete a cookie, set Max-Age to 0 or Expires to a past date
+            const cookieString = `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+            (ctx.res as any).setHeader('Set-Cookie', cookieString);
         }
         return { success: true };
     }),
