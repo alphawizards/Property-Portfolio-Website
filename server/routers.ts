@@ -405,6 +405,7 @@ export const appRouter = router({
 
     createWizard: protectedProcedure.input(wizardPropertySchema).mutation(async ({ input, ctx }) => {
       try {
+        console.log("Received input:", input);
         const propertyId = await db.createPropertyFromWizard({
           ...input,
           userId: ctx.user.id, // Inject userId from context
@@ -412,6 +413,7 @@ export const appRouter = router({
         return { id: propertyId };
       } catch (error: any) {
         console.error("FAILED TO CREATE WIZARD PROPERTY:", error);
+        console.error("DB Error:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: `Failed to create property via wizard: ${error.message}`,
