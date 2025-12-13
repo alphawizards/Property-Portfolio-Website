@@ -1,9 +1,9 @@
+
 import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { z } from "zod";
-import * as db from "./db";
+import { db, isMock } from "./db";
 import * as calc from "../shared/calculations";
 import { TRPCError } from "@trpc/server";
 import { subscriptionRouter } from "./subscription-router";
@@ -367,7 +367,7 @@ export const appRouter = router({
         console.error("FAILED TO CREATE PROPERTY:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to create property: ${error.message}`,
+          message: `Failed to create property: ${error.message} (Mock Mode: ${isMock()})`,
           cause: error,
         });
       }
