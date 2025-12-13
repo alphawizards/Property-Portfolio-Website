@@ -272,9 +272,14 @@ export const appRouter = router({
   // ============ SCENARIO OPERATIONS ============
   scenarios: router({
     list: protectedProcedure
-      .input(z.any().optional()) // Allow any input or undefined, ignore it as it's just a list call
+      .input(z.void()) // Explicitly require no input (or use z.object({}).optional() if clients send empty object)
       .query(async ({ ctx }) => {
-      return await db.getScenariosByUserId(ctx.user.id);
+        try {
+          return await db.getScenariosByUserId(ctx.user.id);
+        } catch (error) {
+          console.error("Error fetching scenarios:", error);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to fetch scenarios", cause: error });
+        }
     }),
 
     clone: protectedProcedure
