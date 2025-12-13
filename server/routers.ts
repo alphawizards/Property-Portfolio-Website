@@ -3,14 +3,32 @@ import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { db, isMock } from "./db";
+import * as Database from "./db";
 import * as calc from "../shared/calculations";
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+// Proxy to allow db.helperFunction() AND db.insert() (Drizzle) to work simultaneously
+// This bridges the named exports from db.ts with the default drizzle instance
+const db = new Proxy(Database.db, {
+  get(target, prop, receiver) {
+    // If property exists in the module exports (helper functions), return that
+    if (prop in Database) {
+      return Reflect.get(Database, prop, receiver);
+    }
+    // Otherwise return from the Drizzle instance
+    return Reflect.get(target, prop, receiver);
+  }
+}) as any;
+
+const { isMock } = Database;
 import { subscriptionRouter } from "./subscription-router";
 import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
 import { authRouter } from "./routers/auth-router";
+import { assetsRouter } from "./routers/assets-router";
+import { liabilitiesRouter } from "./routers/liabilities-router";
 
 // ============ VALIDATION SCHEMAS ============
 
@@ -128,6 +146,8 @@ export const appRouter = router({
   admin: adminRouter,
   feedback: feedbackRouter,
   auth: authRouter,
+  assets: assetsRouter,
+  liabilities: liabilitiesRouter,
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({
     list: protectedProcedure.query(async ({ ctx }) => {

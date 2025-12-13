@@ -38,6 +38,10 @@ import {
   InsertLoanScenario,
   scenarios,
   InsertScenario,
+  assets,
+  InsertAsset,
+  liabilities,
+  InsertLiability,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env"; // We will create this
 import * as mock from "./mock-data";

@@ -15,6 +15,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useScenario } from "@/contexts/ScenarioContext";
 import { formatCurrency } from "@/lib/utils";
 import { ProjectionsTable } from "@/components/projections-table";
+import { AssetList } from "@/components/dashboard/AssetList";
+import { LiabilityList } from "@/components/dashboard/LiabilityList";
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -191,6 +193,21 @@ export default function Dashboard() {
           >
             <h2 className="text-2xl font-semibold tracking-tight">Current Portfolio</h2>
             <p className="text-sm text-muted-foreground mt-1">Last updated: {new Date().toLocaleDateString()}</p>
+          </motion.div>
+
+          {/* ProjectionLab-style Current Finances (Assets & Liabilities) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.99 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 }}
+            className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <div className="h-[400px]">
+              <AssetList scenarioId={currentScenarioId} />
+            </div>
+            <div className="h-[400px]">
+              <LiabilityList scenarioId={currentScenarioId} />
+            </div>
           </motion.div>
 
           <div className="mt-4 grid gap-4 md:grid-cols-5">
@@ -600,9 +617,10 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <TabsList>
                   <TabsTrigger value="financials" className="gap-2"><TrendingUp className="h-4 w-4" /> Financials</TabsTrigger>
+                  <TabsTrigger value="finances" className="gap-2"><DollarSign className="h-4 w-4" /> Finances</TabsTrigger>
                   <TabsTrigger value="properties" className="gap-2"><Building2 className="h-4 w-4" /> Properties</TabsTrigger>
                   <TabsTrigger value="loans" className="gap-2"><Calculator className="h-4 w-4" /> Loans</TabsTrigger>
-                  <TabsTrigger value="cashflow" className="gap-2"><DollarSign className="h-4 w-4" /> Cashflow</TabsTrigger>
+                  <TabsTrigger value="cashflow" className="gap-2"><ArrowUpRight className="h-4 w-4" /> Cashflow</TabsTrigger>
                 </TabsList>
               </div>
 
@@ -616,6 +634,13 @@ export default function Dashboard() {
                     <ProjectionsTable data={chartData} />
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="finances" className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <AssetList />
+                  <LiabilityList />
+                </div>
               </TabsContent>
 
               <TabsContent value="properties" className="space-y-4">
