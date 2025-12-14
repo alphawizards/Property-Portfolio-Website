@@ -1,7 +1,7 @@
 /**
  * Financial Calculations Engine for Property Portfolio Analysis
  *
- * All monetary values are in cents
+ * All monetary values are in cents (unless otherwise specified, but logic assumes consistent units)
  * All rates are in basis points (1 bp = 0.01%)
  */
 
@@ -14,6 +14,7 @@ import type {
   ExpenseLog,
   DepreciationSchedule,
 } from "../drizzle/schema";
+import { Decimal, toDecimal, toCents } from "./decimal-utils";
 
 // ============ UTILITY FUNCTIONS ============
 
@@ -21,22 +22,22 @@ import type {
  * Convert basis points to decimal rate
  * Example: 550 basis points = 0.055 (5.5%)
  */
-function basisPointsToRate(basisPoints: number): number {
-  return basisPoints / 10000;
+function basisPointsToRate(basisPoints: number | string | Decimal): Decimal {
+  return toDecimal(basisPoints).div(10000);
 }
 
 /**
  * Convert cents to dollars for display
  */
-export function centsToDollars(cents: number): number {
-  return cents / 100;
+export function centsToDollars(cents: number | string | Decimal): number {
+  return toDecimal(cents).div(100).toNumber();
 }
 
 /**
  * Convert dollars to cents for storage
  */
-export function dollarsToCents(dollars: number): number {
-  return Math.round(dollars * 100);
+export function dollarsToCents(dollars: number | string | Decimal): number {
+  return toDecimal(dollars).times(100).round().toNumber();
 }
 
 /**
@@ -49,8 +50,8 @@ function getYear(date: Date): number {
 /**
  * Calculate compound growth
  */
-function compoundGrowth(principal: number, rate: number, years: number): number {
-  return principal * Math.pow(1 + rate, years);
+function compoundGrowth(principal: Decimal, rate: Decimal, years: number): Decimal {
+  return principal.times(new Decimal(1).plus(rate).pow(years));
 }
 
 // ============ LOAN CALCULATIONS ============
@@ -66,15 +67,16 @@ export interface LoanRepayment {
  * Calculate Interest Only loan repayment
  */
 export function calculateInterestOnlyRepayment(loan: Loan, rateOffset: number = 0): LoanRepayment {
-  const annualRate = basisPointsToRate(loan.interestRate + rateOffset);
-  const monthlyRate = annualRate / 12;
-  const interestPortion = Math.round(loan.currentAmount * monthlyRate);
+  const currentAmount = toDecimal(loan.currentAmount);
+  const annualRate = basisPointsToRate(toDecimal(loan.interestRate).plus(rateOffset));
+  const monthlyRate = annualRate.div(12);
+  const interestPortion = currentAmount.times(monthlyRate).round();
 
   return {
-    monthlyPayment: interestPortion,
-    annualPayment: interestPortion * 12,
+    monthlyPayment: interestPortion.toNumber(),
+    annualPayment: interestPortion.times(12).toNumber(),
     principalPortion: 0,
-    interestPortion,
+    interestPortion: interestPortion.toNumber(),
   };
 }
 
@@ -83,33 +85,40 @@ export function calculateInterestOnlyRepayment(loan: Loan, rateOffset: number = 
  * M = P × [r(1+r)^n] / [(1+r)^n - 1]
  */
 export function calculatePrincipalAndInterestRepayment(loan: Loan, rateOffset: number = 0): LoanRepayment {
-  const annualRate = basisPointsToRate(loan.interestRate + rateOffset);
-  const monthlyRate = annualRate / 12;
+  const currentAmount = toDecimal(loan.currentAmount);
+  const annualRate = basisPointsToRate(toDecimal(loan.interestRate).plus(rateOffset));
+  const monthlyRate = annualRate.div(12);
   const numberOfPayments = loan.remainingTermYears * 12;
 
-  if (monthlyRate <= 0) { // Safety check for negative rates or zero
+  if (monthlyRate.lte(0)) { // Safety check for negative rates or zero
     // No interest case
-    const monthlyPayment = Math.round(loan.currentAmount / numberOfPayments);
+    const monthlyPayment = currentAmount.div(numberOfPayments).round();
     return {
-      monthlyPayment,
-      annualPayment: monthlyPayment * 12,
-      principalPortion: monthlyPayment,
+      monthlyPayment: monthlyPayment.toNumber(),
+      annualPayment: monthlyPayment.times(12).toNumber(),
+      principalPortion: monthlyPayment.toNumber(),
       interestPortion: 0,
     };
   }
 
-  const monthlyPayment = Math.round(
-    (loan.currentAmount * (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments))) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1)
-  );
+  // (1 + r)^n
+  const ratePow = new Decimal(1).plus(monthlyRate).pow(numberOfPayments);
 
-  const interestPortion = Math.round(loan.currentAmount * monthlyRate);
-  const principalPortion = monthlyPayment - interestPortion;
+  // P * r * (1+r)^n
+  const numerator = currentAmount.times(monthlyRate).times(ratePow);
+
+  // (1+r)^n - 1
+  const denominator = ratePow.minus(1);
+
+  const monthlyPayment = numerator.div(denominator).round();
+  const interestPortion = currentAmount.times(monthlyRate).round();
+  const principalPortion = monthlyPayment.minus(interestPortion);
 
   return {
-    monthlyPayment,
-    annualPayment: monthlyPayment * 12,
-    principalPortion,
-    interestPortion,
+    monthlyPayment: monthlyPayment.toNumber(),
+    annualPayment: monthlyPayment.times(12).toNumber(),
+    principalPortion: principalPortion.toNumber(),
+    interestPortion: interestPortion.toNumber(),
   };
 }
 
@@ -128,13 +137,15 @@ export function calculateLoanRepayment(loan: Loan, rateOffset: number = 0): Loan
  * Calculate remaining loan balance after a number of years
  */
 export function calculateRemainingBalance(loan: Loan, yearsElapsed: number, rateOffset: number = 0): number {
+  const currentAmount = toDecimal(loan.currentAmount);
+
   if (loan.loanStructure === "InterestOnly") {
     // Interest only loans don't reduce principal
-    return loan.currentAmount;
+    return currentAmount.toNumber();
   }
 
-  const annualRate = basisPointsToRate(loan.interestRate + rateOffset);
-  const monthlyRate = annualRate / 12;
+  const annualRate = basisPointsToRate(toDecimal(loan.interestRate).plus(rateOffset));
+  const monthlyRate = annualRate.div(12);
   const totalPayments = loan.remainingTermYears * 12;
   const paymentsMade = yearsElapsed * 12;
 
@@ -143,18 +154,26 @@ export function calculateRemainingBalance(loan: Loan, yearsElapsed: number, rate
   }
 
   const repayment = calculatePrincipalAndInterestRepayment(loan, rateOffset);
-  const monthlyPayment = repayment.monthlyPayment;
+  const monthlyPayment = toDecimal(repayment.monthlyPayment);
 
   // Calculate remaining balance using amortization formula
   const remainingPayments = totalPayments - paymentsMade;
 
-  if (monthlyRate <= 0) {
-    return Math.round(loan.currentAmount - (monthlyPayment * paymentsMade));
+  if (monthlyRate.lte(0)) {
+    return currentAmount.minus(monthlyPayment.times(paymentsMade)).round().toNumber();
   }
 
-  const remainingBalance = (monthlyPayment * (Math.pow(1 + monthlyRate, remainingPayments) - 1)) / (monthlyRate * Math.pow(1 + monthlyRate, remainingPayments));
+  // Balance = P * ((1+r)^N - (1+r)^p) / ((1+r)^N - 1)
+  // OR simpler: Balance using remaining payments formula:
+  // B = PMT * [(1 - (1+r)^-n) / r] where n is remaining payments
 
-  return Math.round(remainingBalance);
+  const onePlusR = new Decimal(1).plus(monthlyRate);
+  const numerator = monthlyPayment.times(onePlusR.pow(remainingPayments).minus(1));
+  const denominator = monthlyRate.times(onePlusR.pow(remainingPayments));
+
+  const remainingBalance = numerator.div(denominator).round();
+
+  return remainingBalance.toNumber();
 }
 
 // ============ PROPERTY VALUE PROJECTIONS ============
@@ -162,7 +181,7 @@ export function calculateRemainingBalance(loan: Loan, yearsElapsed: number, rate
 /**
  * Get the applicable growth rate for a given year
  */
-function getGrowthRateForYear(year: number, growthRates: GrowthRatePeriod[]): number {
+function getGrowthRateForYear(year: number, growthRates: GrowthRatePeriod[]): Decimal {
   // Sort by start year
   const sorted = [...growthRates].sort((a, b) => a.startYear - b.startYear);
 
@@ -173,7 +192,7 @@ function getGrowthRateForYear(year: number, growthRates: GrowthRatePeriod[]): nu
   }
 
   // Default to 0% growth if no period matches
-  return 0;
+  return new Decimal(0);
 }
 
 /**
@@ -185,30 +204,30 @@ export function calculatePropertyValue(property: Property, valuations: PropertyV
   // Find the most recent valuation before or at target year
   const sortedValuations = [...valuations].sort((a, b) => getYear(b.valuationDate) - getYear(a.valuationDate));
 
-  let baseValue = property.purchasePrice;
+  let baseValue = toDecimal(property.purchasePrice);
   let baseYear = purchaseYear;
 
   for (const valuation of sortedValuations) {
     const valuationYear = getYear(valuation.valuationDate);
     if (valuationYear <= targetYear) {
-      baseValue = valuation.value;
+      baseValue = toDecimal(valuation.value);
       baseYear = valuationYear;
       break;
     }
   }
 
   if (targetYear <= baseYear) {
-    return baseValue;
+    return baseValue.toNumber();
   }
 
   // Apply growth rates year by year
   let currentValue = baseValue;
   for (let year = baseYear + 1; year <= targetYear; year++) {
     const growthRate = getGrowthRateForYear(year, growthRates);
-    currentValue = Math.round(currentValue * (1 + growthRate));
+    currentValue = currentValue.times(new Decimal(1).plus(growthRate)).round();
   }
 
-  return currentValue;
+  return currentValue.toNumber();
 }
 
 // ============ RENTAL INCOME PROJECTIONS ============
@@ -217,7 +236,7 @@ export function calculatePropertyValue(property: Property, valuations: PropertyV
  * Calculate annual rental income for a given year
  */
 export function calculateRentalIncomeForYear(rentalIncomes: RentalIncome[], targetYear: number): number {
-  let totalAnnualIncome = 0;
+  let totalAnnualIncome = new Decimal(0);
 
   for (const income of rentalIncomes) {
     const startYear = getYear(income.startDate);
@@ -227,23 +246,26 @@ export function calculateRentalIncomeForYear(rentalIncomes: RentalIncome[], targ
     if (targetYear >= startYear && (endYear === null || targetYear <= endYear)) {
       const yearsElapsed = targetYear - startYear;
       const growthRate = basisPointsToRate(income.growthRate);
-      const currentAmount = Math.round(income.amount * Math.pow(1 + growthRate, yearsElapsed));
+      const amount = toDecimal(income.amount);
+      const currentAmount = amount.times(new Decimal(1).plus(growthRate).pow(yearsElapsed)).round();
 
       // Convert to annual based on frequency
-      let annualAmount = 0;
+      let annualAmount = new Decimal(0);
       if (income.frequency === "Monthly") {
-        annualAmount = currentAmount * 12;
+        annualAmount = currentAmount.times(12);
       } else if (income.frequency === "Weekly") {
-        annualAmount = currentAmount * 52;
+        annualAmount = currentAmount.times(52);
       } else if (income.frequency === "Fortnightly") {
-        annualAmount = currentAmount * 26;
+        annualAmount = currentAmount.times(26);
+      } else if (income.frequency === "Annual" || income.frequency === "Annually") {
+        annualAmount = currentAmount;
       }
 
-      totalAnnualIncome += annualAmount;
+      totalAnnualIncome = totalAnnualIncome.plus(annualAmount);
     }
   }
 
-  return totalAnnualIncome;
+  return totalAnnualIncome.toNumber();
 }
 
 // ============ EXPENSE PROJECTIONS ============
@@ -257,7 +279,7 @@ export function calculateExpensesForYear(
   targetYear: number,
   expenseGrowthOverride?: number
 ): number {
-  let totalAnnualExpenses = 0;
+  let totalAnnualExpenses = new Decimal(0);
 
   for (const expense of expenses) {
     const startYear = getYear(expense.date);
@@ -269,20 +291,22 @@ export function calculateExpensesForYear(
 
     // Use override if provided, otherwise use expense-specific growth rate
     const growthRate = expenseGrowthOverride !== undefined
-      ? expenseGrowthOverride / 100 // Convert percentage to rate
+      ? new Decimal(expenseGrowthOverride).div(100) // Convert percentage to rate
       : basisPointsToRate(expense.growthRate);
-    const currentAmount = Math.round(expense.totalAmount * Math.pow(1 + growthRate, yearsElapsed));
+
+    const totalAmount = toDecimal(expense.totalAmount);
+    const currentAmount = totalAmount.times(new Decimal(1).plus(growthRate).pow(yearsElapsed)).round();
 
     // Convert to annual based on frequency
-    let annualAmount = 0;
+    let annualAmount = new Decimal(0);
     if (expense.frequency === "Monthly") {
-      annualAmount = currentAmount * 12;
+      annualAmount = currentAmount.times(12);
     } else if (expense.frequency === "Annual" || expense.frequency === "Annually") {
       annualAmount = currentAmount;
     } else if (expense.frequency === "Weekly") {
-      annualAmount = currentAmount * 52;
+      annualAmount = currentAmount.times(52);
     } else if (expense.frequency === "Quarterly") {
-      annualAmount = currentAmount * 4;
+      annualAmount = currentAmount.times(4);
     } else if (expense.frequency === "OneTime") {
       // One-time expenses only apply in the year they occur
       if (yearsElapsed === 0) {
@@ -290,10 +314,10 @@ export function calculateExpensesForYear(
       }
     }
 
-    totalAnnualExpenses += annualAmount;
+    totalAnnualExpenses = totalAnnualExpenses.plus(annualAmount);
   }
 
-  return totalAnnualExpenses;
+  return totalAnnualExpenses.toNumber();
 }
 
 // ============ EQUITY CALCULATIONS ============
@@ -317,11 +341,12 @@ export function calculatePropertyEquity(
   interestRateOffset: number = 0
 ): PropertyEquity {
   const propertyValue = calculatePropertyValue(property, valuations, growthRates, targetYear);
+  const propertyValueDecimal = toDecimal(propertyValue);
 
   const purchaseYear = getYear(property.purchaseDate);
-  const yearsElapsed = targetYear - purchaseYear;
+  // const yearsElapsed = targetYear - purchaseYear; // Not used directly
 
-  let totalDebt = 0;
+  let totalDebt = new Decimal(0);
   for (const loan of loans) {
     const loanStartYear = getYear(loan.startDate);
     const loanYearsElapsed = targetYear - loanStartYear;
@@ -331,16 +356,19 @@ export function calculatePropertyEquity(
     }
 
     const remainingBalance = calculateRemainingBalance(loan, loanYearsElapsed, interestRateOffset);
-    totalDebt += remainingBalance;
+    totalDebt = totalDebt.plus(remainingBalance);
   }
 
-  const equity = propertyValue - totalDebt;
-  const lvr = propertyValue > 0 ? (totalDebt / propertyValue) * 100 : 0;
+  const equity = propertyValueDecimal.minus(totalDebt);
+
+  const lvr = propertyValueDecimal.gt(0)
+    ? totalDebt.div(propertyValueDecimal).times(100).toNumber()
+    : 0;
 
   return {
     propertyValue,
-    totalDebt,
-    equity,
+    totalDebt: totalDebt.toNumber(),
+    equity: equity.toNumber(),
     lvr,
   };
 }
@@ -371,34 +399,36 @@ export function calculatePropertyCashflow(
   const rentalIncome = calculateRentalIncomeForYear(rentalIncomes, targetYear);
   const expensesAmount = calculateExpensesForYear(expenses, targetYear, expenseGrowthOverride);
 
-  let loanRepayments = 0;
+  let loanRepayments = new Decimal(0);
   for (const loan of loans) {
     const loanStartYear = getYear(loan.startDate);
     if (targetYear >= loanStartYear) {
       const repayment = calculateLoanRepayment(loan, interestRateOffset);
-      loanRepayments += repayment.annualPayment;
+      loanRepayments = loanRepayments.plus(repayment.annualPayment);
     }
   }
 
   // Find applicable depreciation
-  let depreciationAmount = 0;
+  let depreciationAmount = new Decimal(0);
   const sortedDepreciation = [...depreciation].sort((a, b) => getYear(b.asAtDate) - getYear(a.asAtDate));
   for (const dep of sortedDepreciation) {
     const depYear = getYear(dep.asAtDate);
     if (targetYear >= depYear) {
-      depreciationAmount = dep.annualAmount;
+      depreciationAmount = toDecimal(dep.annualAmount);
       break;
     }
   }
 
-  const netCashflow = rentalIncome - loanRepayments - expensesAmount;
+  const netCashflow = toDecimal(rentalIncome)
+    .minus(loanRepayments)
+    .minus(expensesAmount);
 
   return {
     rentalIncome,
-    loanRepayments,
+    loanRepayments: loanRepayments.toNumber(),
     expenses: expensesAmount,
-    depreciation: depreciationAmount,
-    netCashflow,
+    depreciation: depreciationAmount.toNumber(),
+    netCashflow: netCashflow.toNumber(),
   };
 }
 
@@ -444,38 +474,38 @@ export interface PortfolioProjection {
  * Calculate portfolio summary for a given year
  */
 export function calculatePortfolioSummary(propertiesData: any[], targetYear: number): PortfolioSummary {
-  let totalValue = 0;
-  let totalDebt = 0;
-  let totalEquity = 0;
-  let totalAnnualIncome = 0;
-  let totalAnnualExpenses = 0;
-  let totalAnnualCashflow = 0;
-  let totalLVR = 0;
+  let totalValue = new Decimal(0);
+  let totalDebt = new Decimal(0);
+  let totalEquity = new Decimal(0);
+  let totalAnnualIncome = new Decimal(0);
+  let totalAnnualExpenses = new Decimal(0);
+  let totalAnnualCashflow = new Decimal(0);
+  let totalLVR = new Decimal(0);
 
   for (const data of propertiesData) {
     const equity = calculatePropertyEquity(data.property, data.loans, data.valuations, data.growthRates, targetYear);
     const cashflow = calculatePropertyCashflow(data.property, data.loans, data.rental, data.expenses, data.depreciation, targetYear);
 
-    totalValue += equity.propertyValue;
-    totalDebt += equity.totalDebt;
-    totalEquity += equity.equity;
-    totalAnnualIncome += cashflow.rentalIncome;
-    totalAnnualExpenses += cashflow.expenses + cashflow.loanRepayments;
-    totalAnnualCashflow += cashflow.netCashflow;
-    totalLVR += equity.lvr;
+    totalValue = totalValue.plus(equity.propertyValue);
+    totalDebt = totalDebt.plus(equity.totalDebt);
+    totalEquity = totalEquity.plus(equity.equity);
+    totalAnnualIncome = totalAnnualIncome.plus(cashflow.rentalIncome);
+    totalAnnualExpenses = totalAnnualExpenses.plus(cashflow.expenses).plus(cashflow.loanRepayments);
+    totalAnnualCashflow = totalAnnualCashflow.plus(cashflow.netCashflow);
+    totalLVR = totalLVR.plus(equity.lvr);
   }
 
-  const averageLVR = propertiesData.length > 0 ? totalLVR / propertiesData.length : 0;
+  const averageLVR = propertiesData.length > 0 ? totalLVR.div(propertiesData.length).toNumber() : 0;
 
   return {
     totalProperties: propertiesData.length,
-    totalValue,
-    totalDebt,
-    totalEquity,
+    totalValue: totalValue.toNumber(),
+    totalDebt: totalDebt.toNumber(),
+    totalEquity: totalEquity.toNumber(),
     averageLVR,
-    totalAnnualIncome,
-    totalAnnualExpenses,
-    totalAnnualCashflow,
+    totalAnnualIncome: totalAnnualIncome.toNumber(),
+    totalAnnualExpenses: totalAnnualExpenses.toNumber(),
+    totalAnnualCashflow: totalAnnualCashflow.toNumber(),
   };
 }
 
@@ -494,13 +524,13 @@ export function generatePortfolioProjections(
   const projections: PortfolioProjection[] = [];
 
   for (let year = startYear; year <= endYear; year++) {
-    let totalValue = 0;
-    let totalDebt = 0;
-    let totalEquity = 0;
-    let totalCashflow = 0;
-    let totalRentalIncome = 0;
-    let totalExpenses = 0;
-    let totalLoanRepayments = 0;
+    let totalValue = new Decimal(0);
+    let totalDebt = new Decimal(0);
+    let totalEquity = new Decimal(0);
+    let totalCashflow = new Decimal(0);
+    let totalRentalIncome = new Decimal(0);
+    let totalExpenses = new Decimal(0);
+    let totalLoanRepayments = new Decimal(0);
     const properties: PropertyProjection[] = [];
 
     for (const data of propertiesData) {
@@ -516,13 +546,13 @@ export function generatePortfolioProjections(
         interestRateOffset
       );
 
-      totalValue += equity.propertyValue;
-      totalDebt += equity.totalDebt;
-      totalEquity += equity.equity;
-      totalCashflow += cashflow.netCashflow;
-      totalRentalIncome += cashflow.rentalIncome;
-      totalExpenses += cashflow.expenses;
-      totalLoanRepayments += cashflow.loanRepayments;
+      totalValue = totalValue.plus(equity.propertyValue);
+      totalDebt = totalDebt.plus(equity.totalDebt);
+      totalEquity = totalEquity.plus(equity.equity);
+      totalCashflow = totalCashflow.plus(cashflow.netCashflow);
+      totalRentalIncome = totalRentalIncome.plus(cashflow.rentalIncome);
+      totalExpenses = totalExpenses.plus(cashflow.expenses);
+      totalLoanRepayments = totalLoanRepayments.plus(cashflow.loanRepayments);
 
       properties.push({
         propertyId: data.property.id,
@@ -540,13 +570,13 @@ export function generatePortfolioProjections(
 
     projections.push({
       year,
-      totalValue,
-      totalDebt,
-      totalEquity,
-      totalCashflow,
-      totalRentalIncome,
-      totalExpenses,
-      totalLoanRepayments,
+      totalValue: totalValue.toNumber(),
+      totalDebt: totalDebt.toNumber(),
+      totalEquity: totalEquity.toNumber(),
+      totalCashflow: totalCashflow.toNumber(),
+      totalRentalIncome: totalRentalIncome.toNumber(),
+      totalExpenses: totalExpenses.toNumber(),
+      totalLoanRepayments: totalLoanRepayments.toNumber(),
       properties,
     });
   }
@@ -567,15 +597,17 @@ export interface InvestmentComparison {
  * Calculate buy-and-hold share strategy for comparison
  * Assumes initial investment equal to property deposit and ongoing contributions equal to property cashflow
  */
-export function calculateShareStrategy(initialInvestment: number, annualContribution: number, annualReturn: number, years: number): number {
-  const returnRate = annualReturn / 100;
-  let balance = initialInvestment;
+export function calculateShareStrategy(initialInvestment: number | string | Decimal, annualContribution: number | string | Decimal, annualReturn: number, years: number): number {
+  const returnRate = new Decimal(annualReturn).div(100);
+  let balance = toDecimal(initialInvestment);
+  const contribution = toDecimal(annualContribution);
 
   for (let i = 0; i < years; i++) {
-    balance = balance * (1 + returnRate) + annualContribution;
+    // balance = balance * (1 + returnRate) + annualContribution;
+    balance = balance.times(new Decimal(1).plus(returnRate)).plus(contribution);
   }
 
-  return Math.round(balance);
+  return balance.round().toNumber();
 }
 
 /**

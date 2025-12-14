@@ -27,9 +27,17 @@ export default function PropertyAnalysis() {
   const { data: rental } = trpc.rentalIncome.getByProperty.useQuery({ propertyId });
   const { data: expenses } = trpc.expenses.getByProperty.useQuery({ propertyId });
 
+  // Safe parsing helper
+  const safeParse = (val: string | number | undefined | null): number => {
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') return val;
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Format currency
-  const formatCurrency = (cents: number) => {
-    const dollars = cents / 100;
+  const formatCurrency = (cents: number | string) => {
+    const dollars = safeParse(cents) / 100;
     if (dollars >= 1000000) {
       return `$${(dollars / 1000000).toFixed(2)}m`;
     }
@@ -47,8 +55,11 @@ export default function PropertyAnalysis() {
     const mainLoan = loans.find(l => l.loanType === "PrincipalLoan");
     if (!mainLoan) return [];
 
-    const monthlyRate = (mainLoan.interestRate / 10000) / 12;
-    let remainingBalance = mainLoan.currentAmount;
+    const currentAmount = safeParse(mainLoan.currentAmount);
+    const interestRate = safeParse(mainLoan.interestRate);
+
+    const monthlyRate = (interestRate / 10000) / 12;
+    let remainingBalance = currentAmount;
     const totalMonths = selectedYears * 12;
 
     for (let year = 0; year <= selectedYears; year++) {
@@ -57,17 +68,17 @@ export default function PropertyAnalysis() {
       if (loanStructure === "InterestOnly") {
         // Interest Only: balance stays constant during IO period, then P&I
         if (year < ioPeriod) {
-          remainingBalance = mainLoan.currentAmount;
+          remainingBalance = currentAmount;
         } else {
           // Switch to P&I after IO period
           const monthsSinceIOEnd = monthsElapsed - (ioPeriod * 12);
           const remainingTermMonths = totalMonths - (ioPeriod * 12);
 
           if (remainingTermMonths > 0 && monthsSinceIOEnd > 0) {
-            const monthlyPayment = (mainLoan.currentAmount * monthlyRate * Math.pow(1 + monthlyRate, remainingTermMonths)) /
+            const monthlyPayment = (currentAmount * monthlyRate * Math.pow(1 + monthlyRate, remainingTermMonths)) /
               (Math.pow(1 + monthlyRate, remainingTermMonths) - 1);
 
-            let balance = mainLoan.currentAmount;
+            let balance = currentAmount;
             for (let m = 0; m < monthsSinceIOEnd; m++) {
               const interest = balance * monthlyRate;
               const principal = monthlyPayment - interest;
@@ -80,10 +91,10 @@ export default function PropertyAnalysis() {
       } else {
         // Principal & Interest from the start
         if (monthsElapsed > 0) {
-          const monthlyPayment = (mainLoan.currentAmount * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) /
+          const monthlyPayment = (currentAmount * monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) /
             (Math.pow(1 + monthlyRate, totalMonths) - 1);
 
-          let balance = mainLoan.currentAmount;
+          let balance = currentAmount;
           for (let m = 0; m < monthsElapsed; m++) {
             const interest = balance * monthlyRate;
             const principal = monthlyPayment - interest;
@@ -98,7 +109,7 @@ export default function PropertyAnalysis() {
         year: `FY ${(currentYear + year).toString().slice(-2)}`,
         fullYear: currentYear + year,
         "Debt Balance": remainingBalance / 100,
-        "Principal Paid": (mainLoan.currentAmount - remainingBalance) / 100,
+        "Principal Paid": (currentAmount - remainingBalance) / 100,
       });
     }
 
@@ -113,13 +124,13 @@ export default function PropertyAnalysis() {
     const currentRental = rental[0];
     const currentExpense = expenses[0];
 
-    const weeklyRent = currentRental.amount;
+    const weeklyRent = safeParse(currentRental.amount);
     const annualRent = (weeklyRent * 52);
-    const monthlyExpense = currentExpense.totalAmount;
+    const monthlyExpense = safeParse(currentExpense.totalAmount);
     const annualExpense = monthlyExpense * 12;
 
-    const rentalGrowth = (currentRental.growthRate || 0) / 10000;
-    const expenseGrowth = (currentExpense.growthRate || 0) / 10000;
+    const rentalGrowth = (safeParse(currentRental.growthRate) || 0) / 10000;
+    const expenseGrowth = (safeParse(currentExpense.growthRate) || 0) / 10000;
 
     for (let year = 0; year <= selectedYears; year++) {
       const projectedRent = annualRent * Math.pow(1 + rentalGrowth, year);
@@ -197,7 +208,7 @@ export default function PropertyAnalysis() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-900">
-                {formatCurrency(loans?.reduce((sum, l) => sum + l.currentAmount, 0) || 0)}
+                {formatCurrency(loans?.reduce((sum, l) => sum + safeParse(l.currentAmount), 0) || 0)}
               </div>
               <p className="text-xs text-green-700 mt-1">{loans?.length || 0} loan(s)</p>
             </CardContent>
@@ -212,7 +223,7 @@ export default function PropertyAnalysis() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-purple-900">
-                {rental && rental.length > 0 ? formatCurrency(rental[0].amount * 52) : "$0"}
+                {rental && rental.length > 0 ? formatCurrency(safeParse(rental[0].amount) * 52) : "$0"}
               </div>
               <p className="text-xs text-purple-700 mt-1">/year</p>
             </CardContent>
@@ -227,7 +238,7 @@ export default function PropertyAnalysis() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-900">
-                {expenses && expenses.length > 0 ? formatCurrency(expenses[0].totalAmount * 12) : "$0"}
+                {expenses && expenses.length > 0 ? formatCurrency(safeParse(expenses[0].totalAmount) * 12) : "$0"}
               </div>
               <p className="text-xs text-orange-700 mt-1">/year</p>
             </CardContent>

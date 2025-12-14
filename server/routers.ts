@@ -11,113 +11,23 @@ import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
 import { authRouter } from "./routers/auth-router";
-
-// ============ VALIDATION SCHEMAS ============
-
-const portfolioSchema = z.object({
-  name: z.string().min(1, "Portfolio name is required"),
-  type: z.enum(["Normal", "Trust", "Company"]).default("Normal"),
-  description: z.string().optional(),
-});
-
-const propertySchema = z.object({
-  nickname: z.string().min(1, "Property nickname is required"),
-  address: z.string().min(1, "Address is required"),
-  state: z.string().min(1, "State is required"),
-  suburb: z.string().min(1, "Suburb is required"),
-  propertyType: z.enum(["Residential", "Commercial", "Industrial", "Land"]),
-  ownershipStructure: z.enum(["Trust", "Individual", "Company", "Partnership"]),
-  linkedEntity: z.string().optional(),
-  purchaseDate: z.date(),
-  purchasePrice: z.number().int().positive("Purchase price must be positive"),
-  saleDate: z.date().optional(),
-  salePrice: z.number().int().positive().optional(),
-  status: z.enum(["Actual", "Projected"]),
-  scenarioId: z.number().int().optional(),
-});
-
-const propertyOwnershipSchema = z.object({
-  ownerName: z.string().min(1, "Owner name is required"),
-  percentage: z.number().int().min(0).max(100, "Percentage must be between 0 and 100"),
-});
-
-const purchaseCostsSchema = z.object({
-  agentFee: z.number().int().min(0).default(0),
-  stampDuty: z.number().int().min(0).default(0),
-  legalFee: z.number().int().min(0).default(0),
-  inspectionFee: z.number().int().min(0).default(0),
-  otherCosts: z.number().int().min(0).default(0),
-});
-
-const usagePeriodSchema = z.object({
-  startDate: z.date(),
-  endDate: z.date().optional(),
-  usageType: z.enum(["Investment", "PPOR"]),
-});
-
-const loanSchema = z.object({
-  securityPropertyId: z.number().int().optional(),
-  loanType: z.enum(["EquityLoan", "PrincipalLoan"]),
-  lenderName: z.string().min(1, "Lender name is required"),
-  loanPurpose: z.enum(["PropertyPurchase", "Renovation", "Investment", "Other"]),
-  loanStructure: z.enum(["InterestOnly", "PrincipalAndInterest"]),
-  startDate: z.date(),
-  originalAmount: z.number().int().positive("Original amount must be positive"),
-  currentAmount: z.number().int().positive("Current amount must be positive"),
-  interestRate: z.number().int().positive("Interest rate must be positive"),
-  remainingTermYears: z.number().int().min(0, "Remaining term cannot be negative"),
-  remainingIOPeriodYears: z.number().int().min(0).default(0),
-  repaymentFrequency: z.enum(["Monthly", "Fortnightly", "Weekly"]),
-});
-
-const valuationSchema = z.object({
-  valuationDate: z.date(),
-  value: z.number().int().positive("Value must be positive"),
-});
-
-const growthRatePeriodSchema = z.object({
-  startYear: z.number().int(),
-  endYear: z.number().int().optional(),
-  growthRate: z.number().int(),
-});
-
-const rentalIncomeSchema = z.object({
-  startDate: z.date(),
-  endDate: z.date().optional(),
-  amount: z.number().int().positive("Amount must be positive"),
-  frequency: z.enum(["Monthly", "Weekly", "Fortnightly"]),
-  growthRate: z.number().int().default(0),
-});
-
-const expenseLogSchema = z.object({
-  date: z.date(),
-  totalAmount: z.number().int().positive("Total amount must be positive"),
-  frequency: z.enum(["Monthly", "Annual", "OneTime"]),
-  growthRate: z.number().int().default(0),
-});
-
-const expenseBreakdownSchema = z.object({
-  category: z.string().min(1, "Category is required"),
-  amount: z.number().int().positive("Amount must be positive"),
-  frequency: z.enum(["Weekly", "Monthly", "Quarterly", "Annually"]).default("Annually"),
-});
-
-const depreciationScheduleSchema = z.object({
-  asAtDate: z.date(),
-  annualAmount: z.number().int().positive("Annual amount must be positive"),
-});
-
-const capitalExpenditureSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  amount: z.number().int().positive("Amount must be positive"),
-  date: z.date(),
-});
-
-const portfolioGoalSchema = z.object({
-  goalYear: z.number().int().min(new Date().getFullYear(), "Goal year must be in the future"),
-  targetEquity: z.number().int().positive("Target equity must be positive"),
-  targetValue: z.number().int().positive("Target value must be positive"),
-});
+import { toDecimal, Decimal } from "../shared/decimal-utils";
+import {
+  portfolioSchema,
+  propertySchema,
+  propertyOwnershipSchema,
+  purchaseCostsSchema,
+  usagePeriodSchema,
+  loanSchema,
+  valuationSchema,
+  growthRatePeriodSchema,
+  rentalIncomeSchema,
+  expenseLogSchema,
+  expenseBreakdownSchema,
+  depreciationScheduleSchema,
+  capitalExpenditureSchema,
+  portfolioGoalSchema
+} from "@shared/schemas";
 
 // ============ ROUTERS ============
 
@@ -161,9 +71,9 @@ export const appRouter = router({
             if (!data) {
               return {
                 ...property,
-                currentValue: property.purchasePrice,
+                currentValue: parseFloat(property.purchasePrice.toString()),
                 totalDebt: 0,
-                equity: property.purchasePrice,
+                equity: parseFloat(property.purchasePrice.toString()),
                 lvr: 0,
               };
             }
@@ -194,9 +104,9 @@ export const appRouter = router({
         const goal = await db.getPortfolioGoal(ctx.user.id);
 
         return {
-          totalValue: calc.centsToDollars(totalValue),
-          totalDebt: calc.centsToDollars(totalDebt),
-          totalEquity: calc.centsToDollars(totalEquity),
+          totalValue,
+          totalDebt,
+          totalEquity,
           propertyCount: properties.length,
           properties: propertiesWithFinancials,
           projections: [],
@@ -272,7 +182,7 @@ export const appRouter = router({
   // ============ SCENARIO OPERATIONS ============
   scenarios: router({
     list: protectedProcedure
-      .input(z.void()) // Explicitly require no input (or use z.object({}).optional() if clients send empty object)
+      .input(z.void()) // Explicitly require no input
       .query(async ({ ctx }) => {
         try {
           return await db.getScenariosByUserId(ctx.user.id);
@@ -316,9 +226,9 @@ export const appRouter = router({
             if (!data) {
               return {
                 ...property,
-                currentValue: property.purchasePrice,
+                currentValue: parseFloat(property.purchasePrice.toString()),
                 totalDebt: 0,
-                equity: property.purchasePrice,
+                equity: parseFloat(property.purchasePrice.toString()),
                 lvr: 0,
               };
             }
@@ -366,6 +276,8 @@ export const appRouter = router({
     create: protectedProcedure.input(propertySchema).mutation(async ({ input, ctx }) => {
       const propertyId = await db.createProperty({
         ...input,
+        purchasePrice: input.purchasePrice.toString(),
+        salePrice: input.salePrice?.toString(),
         userId: ctx.user.id,
       });
       return { id: propertyId };
@@ -383,7 +295,12 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this property" });
         }
-        await db.updateProperty(input.id, input.data);
+
+        const updateData: any = { ...input.data };
+        if (input.data.purchasePrice !== undefined) updateData.purchasePrice = input.data.purchasePrice.toString();
+        if (input.data.salePrice !== undefined) updateData.salePrice = input.data.salePrice.toString();
+
+        await db.updateProperty(input.id, updateData);
         return { success: true };
       }),
 
@@ -410,7 +327,6 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
-        // Validate that percentages sum to 100
         const totalPercentage = input.owners.reduce((sum, owner) => sum + owner.percentage, 0);
         if (totalPercentage !== 100) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Ownership percentages must sum to 100" });
@@ -418,7 +334,11 @@ export const appRouter = router({
 
         await db.setPropertyOwnership(
           input.propertyId,
-          input.owners.map((o) => ({ ...o, propertyId: input.propertyId }))
+          input.owners.map((o) => ({
+            ...o,
+            propertyId: input.propertyId,
+            percentage: o.percentage.toString()
+          }))
         );
         return { success: true };
       }),
@@ -436,7 +356,15 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        await db.upsertPurchaseCosts({ ...input.costs, propertyId: input.propertyId });
+        await db.upsertPurchaseCosts({
+          ...input.costs,
+          propertyId: input.propertyId,
+          agentFee: input.costs.agentFee.toString(),
+          stampDuty: input.costs.stampDuty.toString(),
+          legalFee: input.costs.legalFee.toString(),
+          inspectionFee: input.costs.inspectionFee.toString(),
+          otherCosts: input.costs.otherCosts.toString()
+        });
         return { success: true };
       }),
 
@@ -485,7 +413,14 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.createLoan({ ...input.loan, propertyId: input.propertyId });
+        const id = await db.createLoan({
+          ...input.loan,
+          propertyId: input.propertyId,
+          originalAmount: input.loan.originalAmount.toString(),
+          currentAmount: input.loan.currentAmount.toString(),
+          interestRate: input.loan.interestRate.toString(),
+          offsetBalance: input.loan.offsetBalance.toString()
+        });
         return { id };
       }),
 
@@ -505,7 +440,14 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        await db.updateLoan(input.id, input.data);
+
+        const updateData: any = { ...input.data };
+        if (input.data.originalAmount !== undefined) updateData.originalAmount = input.data.originalAmount.toString();
+        if (input.data.currentAmount !== undefined) updateData.currentAmount = input.data.currentAmount.toString();
+        if (input.data.interestRate !== undefined) updateData.interestRate = input.data.interestRate.toString();
+        if (input.data.offsetBalance !== undefined) updateData.offsetBalance = input.data.offsetBalance.toString();
+
+        await db.updateLoan(input.id, updateData);
         return { success: true };
       }),
 
@@ -545,7 +487,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addPropertyValuation({ ...input.valuation, propertyId: input.propertyId });
+        const id = await db.addPropertyValuation({
+          ...input.valuation,
+          propertyId: input.propertyId,
+          value: input.valuation.value.toString()
+        });
         return { id };
       }),
 
@@ -565,7 +511,7 @@ export const appRouter = router({
         const id = await db.addPropertyValuation({
           propertyId: input.propertyId,
           valuationDate: input.date,
-          value: input.value,
+          value: input.value.toString(),
         });
         return { id };
       }),
@@ -597,7 +543,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addGrowthRatePeriod({ ...input.period, propertyId: input.propertyId });
+        const id = await db.addGrowthRatePeriod({
+          ...input.period,
+          propertyId: input.propertyId,
+          growthRate: input.period.growthRate.toString()
+        });
         return { id };
       }),
 
@@ -629,7 +579,12 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addRentalIncome({ ...input.income, propertyId: input.propertyId });
+        const id = await db.addRentalIncome({
+          ...input.income,
+          propertyId: input.propertyId,
+          amount: input.income.amount.toString(),
+          growthRate: input.income.growthRate.toString()
+        });
         return { id };
       }),
 
@@ -642,12 +597,12 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const updates: Partial<{ amount: number; growthRate: number }> = {};
+        const updates: Partial<{ amount: string; growthRate: string }> = {};
         if (input.weeklyRent !== undefined) {
-          updates.amount = input.weeklyRent;
+          updates.amount = input.weeklyRent.toString();
         }
         if (input.growthRate !== undefined) {
-          updates.growthRate = input.growthRate;
+          updates.growthRate = input.growthRate.toString();
         }
         await db.updateRentalIncome(input.id, updates);
         return { success: true };
@@ -682,11 +637,20 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const expenseId = await db.createExpenseLog({ ...input.expense, propertyId: input.propertyId });
+        const expenseId = await db.createExpenseLog({
+          ...input.expense,
+          propertyId: input.propertyId,
+          totalAmount: input.expense.totalAmount.toString(),
+          growthRate: input.expense.growthRate.toString()
+        });
 
         if (input.breakdown && input.breakdown.length > 0) {
           for (const item of input.breakdown) {
-            await db.addExpenseBreakdown({ ...item, expenseLogId: expenseId });
+            await db.addExpenseBreakdown({
+              ...item,
+              expenseLogId: expenseId,
+              amount: item.amount.toString()
+            });
           }
         }
 
@@ -711,15 +675,15 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
-        const updates: { totalAmount?: number; growthRate?: number } = {};
+        const updates: { totalAmount?: string; growthRate?: string } = {};
         if (input.growthRate !== undefined) {
-          updates.growthRate = input.growthRate;
+          updates.growthRate = input.growthRate.toString();
         }
 
         if (input.breakdown) {
           // Calculate total amount from breakdown
           const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
-          updates.totalAmount = totalAmount;
+          updates.totalAmount = totalAmount.toString();
         }
 
         if (Object.keys(updates).length > 0) {
@@ -731,7 +695,11 @@ export const appRouter = router({
           await db.deleteExpenseBreakdownByLogId(input.id);
           // Add new breakdown items
           for (const item of input.breakdown) {
-            await db.addExpenseBreakdown({ ...item, expenseLogId: input.id });
+            await db.addExpenseBreakdown({
+              ...item,
+              expenseLogId: input.id,
+              amount: item.amount.toString()
+            });
           }
         }
         return { success: true };
@@ -761,7 +729,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addDepreciationSchedule({ ...input.schedule, propertyId: input.propertyId });
+        const id = await db.addDepreciationSchedule({
+          ...input.schedule,
+          propertyId: input.propertyId,
+          annualAmount: input.schedule.annualAmount.toString()
+        });
         return { id };
       }),
 
@@ -785,7 +757,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addCapitalExpenditure({ ...input.capex, propertyId: input.propertyId });
+        const id = await db.addCapitalExpenditure({
+          ...input.capex,
+          propertyId: input.propertyId,
+          amount: input.capex.amount.toString()
+        });
         return { id };
       }),
 
@@ -840,7 +816,14 @@ export const appRouter = router({
         if (!data || data.property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        return calc.calculatePropertyEquity(data.property, data.loans, data.valuations, data.growthRates, input.year);
+
+        return calc.calculatePropertyEquity(
+          data.property,
+          data.loans,
+          data.valuations,
+          data.growthRates,
+          input.year
+        );
       }),
 
     propertyCashflow: protectedProcedure
@@ -855,7 +838,15 @@ export const appRouter = router({
         if (!data || data.property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        return calc.calculatePropertyCashflow(data.property, data.loans, data.rental, data.expenses, data.depreciation, input.year);
+
+        return calc.calculatePropertyCashflow(
+          data.property,
+          data.loans,
+          data.rental,
+          data.expenses,
+          data.depreciation,
+          input.year
+        );
       }),
 
     investmentComparison: protectedProcedure
@@ -936,7 +927,13 @@ export const appRouter = router({
     }),
 
     setGoal: protectedProcedure.input(portfolioGoalSchema).mutation(async ({ input, ctx }) => {
-      await db.upsertPortfolioGoal({ ...input, userId: ctx.user.id });
+      await db.upsertPortfolioGoal({
+        ...input,
+        userId: ctx.user.id,
+        targetEquity: input.targetEquity.toString(),
+        targetValue: input.targetValue.toString(),
+        targetCashflow: undefined // Schema didn't have targetCashflow input?
+      });
       return { success: true };
     }),
 

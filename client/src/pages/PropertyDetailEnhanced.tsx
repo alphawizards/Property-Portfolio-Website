@@ -133,9 +133,17 @@ export default function PropertyDetailEnhanced() {
     },
   });
 
+  // Safe parsing helper
+  const safeParse = (val: string | number | undefined | null): number => {
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') return val;
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Initialize editedWeeklyRent with actual weeklyRent when data loads
-  // MUST be before any early returns to follow Rules of Hooks
-  const weeklyRent = rental?.[0]?.amount || 0;
+  const weeklyRent = rental?.[0]?.amount ? safeParse(rental[0].amount) : 0;
+
   useEffect(() => {
     if (weeklyRent > 0 && editedWeeklyRent === 0) {
       setEditedWeeklyRent(weeklyRent);
@@ -165,13 +173,16 @@ export default function PropertyDetailEnhanced() {
   }
 
   // Calculate financials
-  const totalDebt = loans?.reduce((sum, loan) => sum + loan.currentAmount, 0) || 0;
-  const currentValue = valuations?.[0]?.value || property.purchasePrice;
+  const totalDebt = loans?.reduce((sum, loan) => sum + safeParse(loan.currentAmount), 0) || 0;
+  // Use most recent valuation or purchase price as fallback
+  const currentValue = valuations?.[0]?.value
+    ? safeParse(valuations[0].value)
+    : safeParse(property.purchasePrice);
+
+  const purchasePrice = safeParse(property.purchasePrice);
   const equity = currentValue - totalDebt;
-  const purchasePrice = property.purchasePrice;
   const roi = purchasePrice > 0 ? ((currentValue - purchasePrice) / purchasePrice) * 100 : 0;
 
-  // Calculate weekly rental income (weeklyRent already calculated above before early returns)
   const annualRent = weeklyRent * 52;
 
   // Calculate weekly expenses from breakdown with frequency
@@ -193,7 +204,7 @@ export default function PropertyDetailEnhanced() {
   const frequency = expenses?.[0]?.frequency || "Weekly";
 
   const weeklyExpenses = expenseBreakdown?.reduce((total, item) => {
-    return total + convertToWeekly(item.amount, frequency);
+    return total + convertToWeekly(safeParse(item.amount), frequency);
   }, 0) || 0;
 
   // Calculate monthly mortgage payments
@@ -205,9 +216,12 @@ export default function PropertyDetailEnhanced() {
   };
 
   const totalMonthlyMortgage = loans?.reduce((sum, loan) => {
+    const loanAmount = safeParse(loan.currentAmount);
+    const loanRate = safeParse(loan.interestRate);
+
     const monthlyPaymentDollars = calculateMonthlyPayment(
-      loan.currentAmount / 100, // Convert cents to dollars
-      loan.interestRate / 100, // Convert basis points to percentage
+      loanAmount / 100, // Convert cents to dollars
+      loanRate / 100, // Convert basis points to percentage
       loan.remainingTermYears
     );
     return sum + Math.round(monthlyPaymentDollars * 100); // Convert back to cents
@@ -217,7 +231,8 @@ export default function PropertyDetailEnhanced() {
   const weeklyCashflow = weeklyRent - weeklyExpenses;
 
   // Format currency
-  const formatCurrency = (cents: number) => {
+  const formatCurrency = (centsInput: number | string) => {
+    const cents = safeParse(centsInput);
     const dollars = cents / 100;
     if (Math.abs(dollars) >= 1000000) {
       return `$${(dollars / 1000000).toFixed(2)}m`;
@@ -227,7 +242,10 @@ export default function PropertyDetailEnhanced() {
     return `$${dollars.toFixed(2)}`;
   };
 
-  const formatPercent = (value: number) => `${(value / 100).toFixed(2)}%`;
+  const formatPercent = (valueInput: number | string) => {
+    const value = safeParse(valueInput);
+    return `${(value / 100).toFixed(2)}%`;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -324,7 +342,7 @@ export default function PropertyDetailEnhanced() {
                       propertyType: property.propertyType,
                       ownershipStructure: property.ownershipStructure,
                       purchaseDate: new Date(property.purchaseDate),
-                      purchasePrice: property.purchasePrice,
+                      purchasePrice: safeParse(property.purchasePrice),
                       state: property.state,
                       suburb: property.suburb,
                     });
@@ -470,7 +488,7 @@ export default function PropertyDetailEnhanced() {
                   </div>
                   <div>
                     <Label className="text-sm text-gray-600">Purchase Price</Label>
-                    <p className="font-medium">{formatCurrency(property.purchasePrice)}</p>
+                    <p className="font-medium">{formatCurrency(purchasePrice)}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-gray-600">State</Label>
@@ -571,7 +589,7 @@ export default function PropertyDetailEnhanced() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-sm text-gray-600 mb-1">LVR</div>
-                <div className="text-2xl font-bold">{((totalDebt / currentValue) * 100).toFixed(2)}%</div>
+                <div className="text-2xl font-bold">{currentValue > 0 ? ((totalDebt / currentValue) * 100).toFixed(2) : "0.00"}%</div>
               </CardContent>
             </Card>
           </div>
@@ -671,7 +689,7 @@ export default function PropertyDetailEnhanced() {
                   <Label>Rent Growth Rate (%)</Label>
                   <Input
                     type="number"
-                    value={editedRentGrowth > 0 ? editedRentGrowth / 100 : (rental && rental[0] ? rental[0].growthRate / 100 : 3)}
+                    value={editedRentGrowth > 0 ? editedRentGrowth / 100 : (rental && rental[0] ? safeParse(rental[0].growthRate) / 100 : 3)}
                     onChange={(e) => setEditedRentGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
                     onBlur={() => {
                       if (editedRentGrowth > 0 && rental && rental[0]) {
@@ -685,7 +703,7 @@ export default function PropertyDetailEnhanced() {
                   <Label>Expense Growth Rate (%)</Label>
                   <Input
                     type="number"
-                    value={editedExpenseGrowth > 0 ? editedExpenseGrowth / 100 : (expenses && expenses[0] ? expenses[0].growthRate / 100 : 3)}
+                    value={editedExpenseGrowth > 0 ? editedExpenseGrowth / 100 : (expenses && expenses[0] ? safeParse(expenses[0].growthRate) / 100 : 3)}
                     onChange={(e) => setEditedExpenseGrowth(Math.round(parseFloat(e.target.value || "0") * 100))}
                     onBlur={() => {
                       if (editedExpenseGrowth > 0 && expenses && expenses[0]) {
@@ -731,8 +749,8 @@ export default function PropertyDetailEnhanced() {
             weeklyRent={weeklyRent}
             weeklyExpenses={weeklyExpenses}
             monthlyMortgage={totalMonthlyMortgage}
-            rentGrowthRate={rental?.[0]?.growthRate || 0}
-            expenseGrowthRate={expenses?.[0]?.growthRate || 0}
+            rentGrowthRate={rental?.[0]?.growthRate ? safeParse(rental[0].growthRate) : 0}
+            expenseGrowthRate={expenses?.[0]?.growthRate ? safeParse(expenses[0].growthRate) : 0}
           />
 
           {/* Expense Logs */}
@@ -779,7 +797,7 @@ export default function PropertyDetailEnhanced() {
                           </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <ExpenseBreakdownLoader expenseLogId={expense.id} propertyId={propertyId} initialGrowthRate={expense.growthRate} />
+                          <ExpenseBreakdownLoader expenseLogId={expense.id} propertyId={propertyId} initialGrowthRate={safeParse(expense.growthRate)} />
                         </CollapsibleContent>
                       </div>
                     </Collapsible>
@@ -804,7 +822,7 @@ export default function PropertyDetailEnhanced() {
               </div>
               <div>
                 <Label>Property Growth Rate (%)</Label>
-                <Input type="number" defaultValue={(growthRates?.[0]?.growthRate || 500) / 100} step="0.1" />
+                <Input type="number" defaultValue={(growthRates?.[0]?.growthRate ? safeParse(growthRates[0].growthRate) : 500) / 100} step="0.1" />
                 <p className="text-xs text-gray-600 mt-1">
                   {growthRates?.[0] ? `${growthRates[0].startYear} - ${growthRates[0].endYear || 'Forever'}` : 'Not set'}
                 </p>
@@ -826,7 +844,7 @@ export default function PropertyDetailEnhanced() {
           initialPropertyValue={currentValue}
           initialLoanAmount={totalDebt}
           initialDeposit={totalDebt > 0 ? currentValue - totalDebt : undefined}
-          initialInterestRate={loans?.[0]?.interestRate || 600}
+          initialInterestRate={loans?.[0]?.interestRate ? safeParse(loans[0].interestRate) : 600}
           mainLoanId={loans?.[0]?.id}
           initialTerm={loans?.[0]?.remainingTermYears || 25}
           purchaseDate={property?.purchaseDate}

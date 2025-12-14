@@ -47,14 +47,28 @@ const globalForDb = globalThis as unknown as { conn: ReturnType<typeof drizzle> 
 
 // SSL is required for PlanetScale Postgres
 // Mock DB Connection if ENABLE_MOCK_DATA is true to prevent connection errors
-const connectionString = process.env.ENABLE_MOCK_DATA === "true"
-  ? "postgres://mock:mock@localhost:5432/mock"
-  : process.env.DATABASE_URL!;
+let client: ReturnType<typeof postgres>;
 
-const client = postgres(connectionString, {
-  ssl: process.env.ENABLE_MOCK_DATA === "true" ? false : 'require',
-  prepare: false
-});
+try {
+  const connectionString = process.env.ENABLE_MOCK_DATA === "true"
+    ? "postgres://mock:mock@localhost:5432/mock"
+    : process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    console.warn("[Database] DATABASE_URL is missing. Falling back to mock connection string to prevent crash.");
+    client = postgres("postgres://mock:mock@localhost:5432/mock");
+  } else {
+    client = postgres(connectionString, {
+      ssl: process.env.ENABLE_MOCK_DATA === "true" ? false : 'require',
+      prepare: false
+    });
+  }
+} catch (error) {
+  console.error("[Database] Failed to initialize database client:", error);
+  // Fallback to prevent module-level crash
+  client = postgres("postgres://mock:mock@localhost:5432/mock");
+}
+
 export const db = globalForDb.conn ?? drizzle(client, { schema });
 
 if (process.env.NODE_ENV !== "production") globalForDb.conn = db;
