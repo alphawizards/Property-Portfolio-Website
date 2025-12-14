@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Building2, Plus, Search, Grid3x3, List } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
+import { PremiumPropertyChart } from "@/components/charts/PremiumPropertyChart";
 
 export default function Properties() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,6 +31,21 @@ export default function Properties() {
     });
   };
 
+  // Generate Chart Data (Mock Projection)
+  const totalValue = properties?.reduce((sum, p) => sum + p.purchasePrice, 0) || 0;
+  const mockChartData = Array.from({ length: 11 }, (_, i) => {
+    const year = new Date().getFullYear() + i;
+    const growthRate = 1.05; // 5% growth
+    const value = totalValue * Math.pow(growthRate, i);
+    const loan = value * 0.8 * (Math.pow(0.97, i)); // Assuming pay down
+    return {
+      year,
+      value,
+      loan,
+      equity: value - loan
+    };
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -47,7 +63,17 @@ export default function Properties() {
         </div>
       </header>
 
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 space-y-8">
+        {/* Premium Chart Section */}
+        {properties && properties.length > 0 && (
+          <PremiumPropertyChart
+            data={mockChartData}
+            title="Portfolio Projection"
+            description="Estimated value and equity growth over the next 10 years (5% growth assumption)"
+            className="shadow-sm border-gray-200"
+          />
+        )}
+
         <Card>
           <CardContent className="pt-6">
             {/* Search and View Controls */}
@@ -130,9 +156,8 @@ export default function Properties() {
                         <div className="text-center">
                           <p className="text-xs text-gray-500">Status</p>
                           <span
-                            className={`inline-block px-2 py-1 text-xs font-medium rounded ${
-                              property.status === "Actual" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                            }`}
+                            className={`inline-block px-2 py-1 text-xs font-medium rounded ${property.status === "Actual" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                              }`}
                           >
                             {property.status}
                           </span>
@@ -160,9 +185,8 @@ export default function Properties() {
                         <div className="flex items-center justify-between text-sm mt-2">
                           <span className="text-gray-500">Status</span>
                           <span
-                            className={`inline-block px-2 py-1 text-xs font-medium rounded ${
-                              property.status === "Actual" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                            }`}
+                            className={`inline-block px-2 py-1 text-xs font-medium rounded ${property.status === "Actual" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                              }`}
                           >
                             {property.status}
                           </span>

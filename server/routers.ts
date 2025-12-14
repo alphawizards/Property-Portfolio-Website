@@ -1,33 +1,144 @@
+
 import { COOKIE_NAME } from "../shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
+// ... types and schemas ...
+import {
+  wizardPropertySchema
+} from "../shared/schemas";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { z } from "zod";
-import * as db from "./db";
+import * as Database from "./db";
 import * as calc from "../shared/calculations";
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+
+// Proxy to allow db.helperFunction() AND db.insert() (Drizzle) to work simultaneously
+// This bridges the named exports from db.ts with the default drizzle instance
+const db = new Proxy(Database.db, {
+  get(target, prop, receiver) {
+    // If property exists in the module exports (helper functions), return that
+    if (prop in Database) {
+      return Reflect.get(Database, prop, receiver);
+    }
+    // Otherwise return from the Drizzle instance
+    return Reflect.get(target, prop, receiver);
+  }
+}) as any;
+
+const { isMock } = Database;
 import { subscriptionRouter } from "./subscription-router";
 import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
 import { authRouter } from "./routers/auth-router";
-import { toDecimal, Decimal } from "../shared/decimal-utils";
-import {
-  portfolioSchema,
-  propertySchema,
-  propertyOwnershipSchema,
-  purchaseCostsSchema,
-  usagePeriodSchema,
-  loanSchema,
-  valuationSchema,
-  growthRatePeriodSchema,
-  rentalIncomeSchema,
-  expenseLogSchema,
-  expenseBreakdownSchema,
-  depreciationScheduleSchema,
-  capitalExpenditureSchema,
-  portfolioGoalSchema
-} from "@shared/schemas";
+import { assetsRouter } from "./routers/assets-router";
+import { liabilitiesRouter } from "./routers/liabilities-router";
+
+// ============ VALIDATION SCHEMAS ============
+
+const portfolioSchema = z.object({
+  name: z.string().min(1, "Portfolio name is required"),
+  type: z.enum(["Normal", "Trust", "Company"]).default("Normal"),
+  description: z.string().optional(),
+});
+
+const propertySchema = z.object({
+  nickname: z.string().min(1, "Property nickname is required"),
+  address: z.string().min(1, "Address is required"),
+  state: z.string().min(1, "State is required"),
+  suburb: z.string().min(1, "Suburb is required"),
+  propertyType: z.enum(["Residential", "Commercial", "Industrial", "Land"]),
+  ownershipStructure: z.enum(["Trust", "Individual", "Company", "Partnership"]),
+  linkedEntity: z.string().optional(),
+  purchaseDate: z.date(),
+  purchasePrice: z.number().int().min(0, "Purchase price must be positive"),
+  saleDate: z.date().optional(),
+  salePrice: z.number().int().min(0).optional(),
+  status: z.enum(["Actual", "Projected"]),
+  scenarioId: z.number().int().optional(),
+});
+
+const propertyOwnershipSchema = z.object({
+  ownerName: z.string().min(1, "Owner name is required"),
+  percentage: z.number().int().min(0).max(100, "Percentage must be between 0 and 100"),
+});
+
+const purchaseCostsSchema = z.object({
+  agentFee: z.number().int().min(0).default(0),
+  stampDuty: z.number().int().min(0).default(0),
+  legalFee: z.number().int().min(0).default(0),
+  inspectionFee: z.number().int().min(0).default(0),
+  otherCosts: z.number().int().min(0).default(0),
+});
+
+const usagePeriodSchema = z.object({
+  startDate: z.date(),
+  endDate: z.date().optional(),
+  usageType: z.enum(["Investment", "PPOR"]),
+});
+
+const loanSchema = z.object({
+  securityPropertyId: z.number().int().optional(),
+  loanType: z.enum(["EquityLoan", "PrincipalLoan"]),
+  lenderName: z.string().min(1, "Lender name is required"),
+  loanPurpose: z.enum(["PropertyPurchase", "Renovation", "Investment", "Other"]),
+  loanStructure: z.enum(["InterestOnly", "PrincipalAndInterest"]),
+  startDate: z.date(),
+  originalAmount: z.number().int().min(0, "Original amount must be positive"),
+  currentAmount: z.number().int().min(0, "Current amount must be positive"),
+  interestRate: z.number().int().min(0, "Interest rate must be positive"),
+  remainingTermYears: z.number().int().min(0, "Remaining term cannot be negative"),
+  remainingIOPeriodYears: z.number().int().min(0).default(0),
+  repaymentFrequency: z.enum(["Monthly", "Fortnightly", "Weekly"]),
+});
+
+const valuationSchema = z.object({
+  valuationDate: z.date(),
+  value: z.number().int().min(0, "Value must be positive"),
+});
+
+const growthRatePeriodSchema = z.object({
+  startYear: z.number().int(),
+  endYear: z.number().int().optional(),
+  growthRate: z.number().int(),
+});
+
+const rentalIncomeSchema = z.object({
+  startDate: z.date(),
+  endDate: z.date().optional(),
+  amount: z.number().int().min(0, "Amount must be positive"),
+  frequency: z.enum(["Monthly", "Weekly", "Fortnightly"]),
+  growthRate: z.number().int().default(0),
+});
+
+const expenseLogSchema = z.object({
+  date: z.date(),
+  totalAmount: z.number().int().min(0, "Total amount must be positive"),
+  frequency: z.enum(["Monthly", "Annual", "OneTime"]),
+  growthRate: z.number().int().default(0),
+});
+
+const expenseBreakdownSchema = z.object({
+  category: z.string().min(1, "Category is required"),
+  amount: z.number().int().min(0, "Amount must be positive"),
+  frequency: z.enum(["Weekly", "Monthly", "Quarterly", "Annually"]).default("Annually"),
+});
+
+const depreciationScheduleSchema = z.object({
+  asAtDate: z.date(),
+  annualAmount: z.number().int().min(0, "Annual amount must be positive"),
+});
+
+const capitalExpenditureSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  amount: z.number().int().min(0, "Amount must be positive"),
+  date: z.date(),
+});
+
+const portfolioGoalSchema = z.object({
+  goalYear: z.number().int().min(new Date().getFullYear(), "Goal year must be in the future"),
+  targetEquity: z.number().int().min(0, "Target equity must be positive"),
+  targetValue: z.number().int().min(0, "Target value must be positive"),
+});
 
 // ============ ROUTERS ============
 
@@ -38,6 +149,8 @@ export const appRouter = router({
   admin: adminRouter,
   feedback: feedbackRouter,
   auth: authRouter,
+  assets: assetsRouter,
+  liabilities: liabilitiesRouter,
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({
     list: protectedProcedure.query(async ({ ctx }) => {
@@ -274,13 +387,39 @@ export const appRouter = router({
     }),
 
     create: protectedProcedure.input(propertySchema).mutation(async ({ input, ctx }) => {
-      const propertyId = await db.createProperty({
-        ...input,
-        purchasePrice: input.purchasePrice.toString(),
-        salePrice: input.salePrice?.toString(),
-        userId: ctx.user.id,
-      });
-      return { id: propertyId };
+      try {
+        const propertyId = await db.createProperty({
+          ...input,
+          userId: ctx.user.id,
+        });
+        return { id: propertyId };
+      } catch (error: any) {
+        console.error("FAILED TO CREATE PROPERTY:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create property: ${error.message} (Mock Mode: ${isMock()})`,
+          cause: error,
+        });
+      }
+    }),
+
+    createWizard: protectedProcedure.input(wizardPropertySchema).mutation(async ({ input, ctx }) => {
+      try {
+        console.log("Received input:", input);
+        const propertyId = await db.createPropertyFromWizard({
+          ...input,
+          userId: ctx.user.id, // Inject userId from context
+        });
+        return { id: propertyId };
+      } catch (error: any) {
+        console.error("FAILED TO CREATE WIZARD PROPERTY:", error);
+        console.error("DB Error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to create property via wizard: ${error.message}`,
+          cause: error,
+        });
+      }
     }),
 
     update: protectedProcedure

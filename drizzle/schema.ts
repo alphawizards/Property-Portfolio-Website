@@ -412,3 +412,67 @@ export const feedback = pgTable("feedback", {
 
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = typeof feedback.$inferInsert;
+
+// ============================================================================
+// ASSETS & LIABILITIES (ProjectionLab Mechanics)
+// ============================================================================
+
+export const assetTypeEnum = pgEnum('asset_type', ["Cash", "Stock", "Crypto", "Vehicle", "Property", "Other"]);
+export const liabilityTypeEnum = pgEnum('liability_type', ["CreditCard", "PersonalLoan", "StudentLoan", "AutoLoan", "Other"]);
+export const contributionFrequencyEnum = pgEnum('contribution_frequency', ["Monthly", "Annually", "OneTime"]);
+export const paymentFrequencyEnum = pgEnum('payment_frequency', ["Monthly", "Fortnightly", "Weekly"]);
+
+export const assets = pgTable("assets", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  scenarioId: integer("scenarioId").references(() => scenarios.id, { onDelete: 'cascade' }), // Supports "What-If"
+
+  name: varchar("name", { length: 255 }).notNull(),
+  type: assetTypeEnum("type").default('Cash').notNull(),
+  balance: numeric("balance", { precision: 15, scale: 2 }).notNull().default("0"),
+  currency: varchar("currency", { length: 3 }).default('AUD').notNull(),
+  growthRate: numeric("growthRate", { precision: 5, scale: 2 }).default("0").notNull(),
+
+  // Forecasting Columns
+  contributionAmount: numeric("contributionAmount", { precision: 15, scale: 2 }).default("0").notNull(),
+  contributionFrequency: contributionFrequencyEnum("contributionFrequency").default('Monthly').notNull(),
+
+  // Flexible Metadata
+  metadata: text("metadata"), // JSON string (Drizzle doesn't strictly enforce jsonb in all drivers, using available type or casting)
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_assets_user_id").on(table.userId),
+  scenarioIdIdx: index("idx_assets_scenario_id").on(table.scenarioId),
+}));
+
+export type Asset = typeof assets.$inferSelect;
+export type InsertAsset = typeof assets.$inferInsert;
+
+export const liabilities = pgTable("liabilities", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  scenarioId: integer("scenarioId").references(() => scenarios.id, { onDelete: 'cascade' }),
+
+  name: varchar("name", { length: 255 }).notNull(),
+  type: liabilityTypeEnum("type").default('Other').notNull(),
+  balance: numeric("balance", { precision: 15, scale: 2 }).notNull().default("0"),
+  interestRate: numeric("interestRate", { precision: 5, scale: 2 }).default("0").notNull(),
+
+  // Forecasting Columns
+  paymentAmount: numeric("paymentAmount", { precision: 15, scale: 2 }).default("0").notNull(),
+  paymentFrequency: paymentFrequencyEnum("paymentFrequency").default('Monthly').notNull(),
+
+  // Flexible Metadata
+  metadata: text("metadata"), // JSON string
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_liabilities_user_id").on(table.userId),
+  scenarioIdIdx: index("idx_liabilities_scenario_id").on(table.scenarioId),
+}));
+
+export type Liability = typeof liabilities.$inferSelect;
+export type InsertLiability = typeof liabilities.$inferInsert;
