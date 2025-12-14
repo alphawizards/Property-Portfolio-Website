@@ -184,9 +184,9 @@ export const appRouter = router({
             if (!data) {
               return {
                 ...property,
-                currentValue: property.purchasePrice,
+                currentValue: parseFloat(property.purchasePrice.toString()),
                 totalDebt: 0,
-                equity: property.purchasePrice,
+                equity: parseFloat(property.purchasePrice.toString()),
                 lvr: 0,
               };
             }
@@ -217,9 +217,9 @@ export const appRouter = router({
         const goal = await db.getPortfolioGoal(ctx.user.id);
 
         return {
-          totalValue: calc.centsToDollars(totalValue),
-          totalDebt: calc.centsToDollars(totalDebt),
-          totalEquity: calc.centsToDollars(totalEquity),
+          totalValue,
+          totalDebt,
+          totalEquity,
           propertyCount: properties.length,
           properties: propertiesWithFinancials,
           projections: [],
@@ -295,7 +295,7 @@ export const appRouter = router({
   // ============ SCENARIO OPERATIONS ============
   scenarios: router({
     list: protectedProcedure
-      .input(z.void()) // Explicitly require no input (or use z.object({}).optional() if clients send empty object)
+      .input(z.void()) // Explicitly require no input
       .query(async ({ ctx }) => {
         try {
           return await db.getScenariosByUserId(ctx.user.id);
@@ -339,9 +339,9 @@ export const appRouter = router({
             if (!data) {
               return {
                 ...property,
-                currentValue: property.purchasePrice,
+                currentValue: parseFloat(property.purchasePrice.toString()),
                 totalDebt: 0,
-                equity: property.purchasePrice,
+                equity: parseFloat(property.purchasePrice.toString()),
                 lvr: 0,
               };
             }
@@ -434,7 +434,12 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "You do not have access to this property" });
         }
-        await db.updateProperty(input.id, input.data);
+
+        const updateData: any = { ...input.data };
+        if (input.data.purchasePrice !== undefined) updateData.purchasePrice = input.data.purchasePrice.toString();
+        if (input.data.salePrice !== undefined) updateData.salePrice = input.data.salePrice.toString();
+
+        await db.updateProperty(input.id, updateData);
         return { success: true };
       }),
 
@@ -461,7 +466,6 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
-        // Validate that percentages sum to 100
         const totalPercentage = input.owners.reduce((sum, owner) => sum + owner.percentage, 0);
         if (totalPercentage !== 100) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Ownership percentages must sum to 100" });
@@ -469,7 +473,11 @@ export const appRouter = router({
 
         await db.setPropertyOwnership(
           input.propertyId,
-          input.owners.map((o) => ({ ...o, propertyId: input.propertyId }))
+          input.owners.map((o) => ({
+            ...o,
+            propertyId: input.propertyId,
+            percentage: o.percentage.toString()
+          }))
         );
         return { success: true };
       }),
@@ -487,7 +495,15 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        await db.upsertPurchaseCosts({ ...input.costs, propertyId: input.propertyId });
+        await db.upsertPurchaseCosts({
+          ...input.costs,
+          propertyId: input.propertyId,
+          agentFee: input.costs.agentFee.toString(),
+          stampDuty: input.costs.stampDuty.toString(),
+          legalFee: input.costs.legalFee.toString(),
+          inspectionFee: input.costs.inspectionFee.toString(),
+          otherCosts: input.costs.otherCosts.toString()
+        });
         return { success: true };
       }),
 
@@ -536,7 +552,14 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.createLoan({ ...input.loan, propertyId: input.propertyId });
+        const id = await db.createLoan({
+          ...input.loan,
+          propertyId: input.propertyId,
+          originalAmount: input.loan.originalAmount.toString(),
+          currentAmount: input.loan.currentAmount.toString(),
+          interestRate: input.loan.interestRate.toString(),
+          offsetBalance: input.loan.offsetBalance.toString()
+        });
         return { id };
       }),
 
@@ -556,7 +579,14 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        await db.updateLoan(input.id, input.data);
+
+        const updateData: any = { ...input.data };
+        if (input.data.originalAmount !== undefined) updateData.originalAmount = input.data.originalAmount.toString();
+        if (input.data.currentAmount !== undefined) updateData.currentAmount = input.data.currentAmount.toString();
+        if (input.data.interestRate !== undefined) updateData.interestRate = input.data.interestRate.toString();
+        if (input.data.offsetBalance !== undefined) updateData.offsetBalance = input.data.offsetBalance.toString();
+
+        await db.updateLoan(input.id, updateData);
         return { success: true };
       }),
 
@@ -596,7 +626,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addPropertyValuation({ ...input.valuation, propertyId: input.propertyId });
+        const id = await db.addPropertyValuation({
+          ...input.valuation,
+          propertyId: input.propertyId,
+          value: input.valuation.value.toString()
+        });
         return { id };
       }),
 
@@ -616,7 +650,7 @@ export const appRouter = router({
         const id = await db.addPropertyValuation({
           propertyId: input.propertyId,
           valuationDate: input.date,
-          value: input.value,
+          value: input.value.toString(),
         });
         return { id };
       }),
@@ -648,7 +682,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addGrowthRatePeriod({ ...input.period, propertyId: input.propertyId });
+        const id = await db.addGrowthRatePeriod({
+          ...input.period,
+          propertyId: input.propertyId,
+          growthRate: input.period.growthRate.toString()
+        });
         return { id };
       }),
 
@@ -680,7 +718,12 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addRentalIncome({ ...input.income, propertyId: input.propertyId });
+        const id = await db.addRentalIncome({
+          ...input.income,
+          propertyId: input.propertyId,
+          amount: input.income.amount.toString(),
+          growthRate: input.income.growthRate.toString()
+        });
         return { id };
       }),
 
@@ -693,12 +736,12 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const updates: Partial<{ amount: number; growthRate: number }> = {};
+        const updates: Partial<{ amount: string; growthRate: string }> = {};
         if (input.weeklyRent !== undefined) {
-          updates.amount = input.weeklyRent;
+          updates.amount = input.weeklyRent.toString();
         }
         if (input.growthRate !== undefined) {
-          updates.growthRate = input.growthRate;
+          updates.growthRate = input.growthRate.toString();
         }
         await db.updateRentalIncome(input.id, updates);
         return { success: true };
@@ -733,11 +776,20 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const expenseId = await db.createExpenseLog({ ...input.expense, propertyId: input.propertyId });
+        const expenseId = await db.createExpenseLog({
+          ...input.expense,
+          propertyId: input.propertyId,
+          totalAmount: input.expense.totalAmount.toString(),
+          growthRate: input.expense.growthRate.toString()
+        });
 
         if (input.breakdown && input.breakdown.length > 0) {
           for (const item of input.breakdown) {
-            await db.addExpenseBreakdown({ ...item, expenseLogId: expenseId });
+            await db.addExpenseBreakdown({
+              ...item,
+              expenseLogId: expenseId,
+              amount: item.amount.toString()
+            });
           }
         }
 
@@ -762,15 +814,15 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
-        const updates: { totalAmount?: number; growthRate?: number } = {};
+        const updates: { totalAmount?: string; growthRate?: string } = {};
         if (input.growthRate !== undefined) {
-          updates.growthRate = input.growthRate;
+          updates.growthRate = input.growthRate.toString();
         }
 
         if (input.breakdown) {
           // Calculate total amount from breakdown
           const totalAmount = input.breakdown.reduce((sum, item) => sum + item.amount, 0);
-          updates.totalAmount = totalAmount;
+          updates.totalAmount = totalAmount.toString();
         }
 
         if (Object.keys(updates).length > 0) {
@@ -782,7 +834,11 @@ export const appRouter = router({
           await db.deleteExpenseBreakdownByLogId(input.id);
           // Add new breakdown items
           for (const item of input.breakdown) {
-            await db.addExpenseBreakdown({ ...item, expenseLogId: input.id });
+            await db.addExpenseBreakdown({
+              ...item,
+              expenseLogId: input.id,
+              amount: item.amount.toString()
+            });
           }
         }
         return { success: true };
@@ -812,7 +868,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addDepreciationSchedule({ ...input.schedule, propertyId: input.propertyId });
+        const id = await db.addDepreciationSchedule({
+          ...input.schedule,
+          propertyId: input.propertyId,
+          annualAmount: input.schedule.annualAmount.toString()
+        });
         return { id };
       }),
 
@@ -836,7 +896,11 @@ export const appRouter = router({
         if (!property || property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        const id = await db.addCapitalExpenditure({ ...input.capex, propertyId: input.propertyId });
+        const id = await db.addCapitalExpenditure({
+          ...input.capex,
+          propertyId: input.propertyId,
+          amount: input.capex.amount.toString()
+        });
         return { id };
       }),
 
@@ -891,7 +955,14 @@ export const appRouter = router({
         if (!data || data.property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        return calc.calculatePropertyEquity(data.property, data.loans, data.valuations, data.growthRates, input.year);
+
+        return calc.calculatePropertyEquity(
+          data.property,
+          data.loans,
+          data.valuations,
+          data.growthRates,
+          input.year
+        );
       }),
 
     propertyCashflow: protectedProcedure
@@ -906,7 +977,15 @@ export const appRouter = router({
         if (!data || data.property.userId !== ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN" });
         }
-        return calc.calculatePropertyCashflow(data.property, data.loans, data.rental, data.expenses, data.depreciation, input.year);
+
+        return calc.calculatePropertyCashflow(
+          data.property,
+          data.loans,
+          data.rental,
+          data.expenses,
+          data.depreciation,
+          input.year
+        );
       }),
 
     investmentComparison: protectedProcedure
@@ -987,7 +1066,13 @@ export const appRouter = router({
     }),
 
     setGoal: protectedProcedure.input(portfolioGoalSchema).mutation(async ({ input, ctx }) => {
-      await db.upsertPortfolioGoal({ ...input, userId: ctx.user.id });
+      await db.upsertPortfolioGoal({
+        ...input,
+        userId: ctx.user.id,
+        targetEquity: input.targetEquity.toString(),
+        targetValue: input.targetValue.toString(),
+        targetCashflow: undefined // Schema didn't have targetCashflow input?
+      });
       return { success: true };
     }),
 

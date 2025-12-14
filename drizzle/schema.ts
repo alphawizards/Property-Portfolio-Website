@@ -136,9 +136,9 @@ export const portfolioGoals = pgTable("portfolio_goals", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
   goalYear: integer("goalYear").notNull(),
-  targetEquity: integer("targetEquity"),
-  targetCashflow: integer("targetCashflow"),
-  targetValue: integer("targetValue"),
+  targetEquity: numeric("targetEquity", { precision: 15, scale: 2 }),
+  targetCashflow: numeric("targetCashflow", { precision: 15, scale: 2 }),
+  targetValue: numeric("targetValue", { precision: 15, scale: 2 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -163,9 +163,9 @@ export const properties = pgTable("properties", {
   ownershipStructure: ownershipStructureEnum("ownershipStructure").notNull(),
   linkedEntity: varchar("linkedEntity", { length: 255 }),
   purchaseDate: timestamp("purchaseDate").notNull(),
-  purchasePrice: integer("purchasePrice").notNull(),
+  purchasePrice: numeric("purchasePrice", { precision: 15, scale: 2 }).notNull(),
   saleDate: timestamp("saleDate"),
-  salePrice: integer("salePrice"),
+  salePrice: numeric("salePrice", { precision: 15, scale: 2 }),
   status: propertyStatusEnum("status").default('Actual').notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
@@ -178,7 +178,7 @@ export const propertyOwnership = pgTable("property_ownership", {
   id: serial("id").primaryKey(),
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   ownerName: varchar("ownerName", { length: 255 }).notNull(),
-  percentage: integer("percentage").notNull(),
+  percentage: numeric("percentage", { precision: 5, scale: 2 }).notNull(),
 });
 
 export type PropertyOwnership = typeof propertyOwnership.$inferSelect;
@@ -187,11 +187,11 @@ export type InsertPropertyOwnership = typeof propertyOwnership.$inferInsert;
 export const purchaseCosts = pgTable("purchase_costs", {
   id: serial("id").primaryKey(),
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }).unique(),
-  agentFee: integer("agentFee").default(0).notNull(),
-  stampDuty: integer("stampDuty").default(0).notNull(),
-  legalFee: integer("legalFee").default(0).notNull(),
-  inspectionFee: integer("inspectionFee").default(0).notNull(),
-  otherCosts: integer("otherCosts").default(0).notNull(),
+  agentFee: numeric("agentFee", { precision: 12, scale: 2 }).default('0').notNull(),
+  stampDuty: numeric("stampDuty", { precision: 12, scale: 2 }).default('0').notNull(),
+  legalFee: numeric("legalFee", { precision: 12, scale: 2 }).default('0').notNull(),
+  inspectionFee: numeric("inspectionFee", { precision: 12, scale: 2 }).default('0').notNull(),
+  otherCosts: numeric("otherCosts", { precision: 12, scale: 2 }).default('0').notNull(),
 });
 
 export type PurchaseCosts = typeof purchaseCosts.$inferSelect;
@@ -212,7 +212,7 @@ export const propertyValuations = pgTable("property_valuations", {
   id: serial("id").primaryKey(),
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   valuationDate: timestamp("valuationDate").notNull(),
-  value: integer("value").notNull(),
+  value: numeric("value", { precision: 15, scale: 2 }).notNull(),
 });
 
 export type PropertyValuation = typeof propertyValuations.$inferSelect;
@@ -223,7 +223,7 @@ export const growthRatePeriods = pgTable("growth_rate_periods", {
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   startYear: integer("startYear").notNull(),
   endYear: integer("endYear"),
-  growthRate: integer("growthRate").notNull(),
+  growthRate: numeric("growthRate", { precision: 5, scale: 2 }).notNull(),
 });
 
 export type GrowthRatePeriod = typeof growthRatePeriods.$inferSelect;
@@ -242,13 +242,13 @@ export const loans = pgTable("loans", {
   loanPurpose: loanPurposeEnum("loanPurpose").notNull(),
   loanStructure: loanStructureEnum("loanStructure").notNull(),
   startDate: timestamp("startDate").notNull(),
-  originalAmount: integer("originalAmount").notNull(),
-  currentAmount: integer("currentAmount").notNull(),
-  interestRate: integer("interestRate").notNull(),
+  originalAmount: numeric("originalAmount", { precision: 15, scale: 2 }).notNull(),
+  currentAmount: numeric("currentAmount", { precision: 15, scale: 2 }).notNull(),
+  interestRate: numeric("interestRate", { precision: 5, scale: 2 }).notNull(),
   remainingTermYears: integer("remainingTermYears").notNull(),
   remainingIOPeriodYears: integer("remainingIOPeriodYears").default(0).notNull(),
   repaymentFrequency: frequencyEnum("repaymentFrequency").notNull(),
-  offsetBalance: integer("offsetBalance").default(0).notNull(),
+  offsetBalance: numeric("offsetBalance", { precision: 15, scale: 2 }).default('0').notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -281,9 +281,9 @@ export const rentalIncome = pgTable("rental_income", {
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
-  amount: integer("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   frequency: frequencyEnum("frequency").notNull(),
-  growthRate: integer("growthRate").default(0).notNull(),
+  growthRate: numeric("growthRate", { precision: 5, scale: 2 }).default('0').notNull(),
 });
 
 export type RentalIncome = typeof rentalIncome.$inferSelect;
@@ -293,9 +293,9 @@ export const expenseLogs = pgTable("expense_logs", {
   id: serial("id").primaryKey(),
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   date: timestamp("date").notNull(),
-  totalAmount: integer("totalAmount").notNull(),
+  totalAmount: numeric("totalAmount", { precision: 12, scale: 2 }).notNull(),
   frequency: frequencyEnum("frequency").notNull(),
-  growthRate: integer("growthRate").default(0).notNull(),
+  growthRate: numeric("growthRate", { precision: 5, scale: 2 }).default('0').notNull(),
 });
 
 export type ExpenseLog = typeof expenseLogs.$inferSelect;
@@ -305,7 +305,7 @@ export const expenseBreakdown = pgTable("expense_breakdown", {
   id: serial("id").primaryKey(),
   expenseLogId: integer("expenseLogId").notNull().references(() => expenseLogs.id, { onDelete: 'cascade' }),
   category: varchar("category", { length: 255 }).notNull(),
-  amount: integer("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
 });
 
 export type ExpenseBreakdown = typeof expenseBreakdown.$inferSelect;
@@ -315,7 +315,7 @@ export const depreciationSchedule = pgTable("depreciation_schedule", {
   id: serial("id").primaryKey(),
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   asAtDate: timestamp("asAtDate").notNull(),
-  annualAmount: integer("annualAmount").notNull(),
+  annualAmount: numeric("annualAmount", { precision: 12, scale: 2 }).notNull(),
 });
 
 export type DepreciationSchedule = typeof depreciationSchedule.$inferSelect;
@@ -325,7 +325,7 @@ export const capitalExpenditure = pgTable("capital_expenditure", {
   id: serial("id").primaryKey(),
   propertyId: integer("propertyId").notNull().references(() => properties.id, { onDelete: 'cascade' }),
   name: varchar("name", { length: 255 }).notNull(),
-  amount: integer("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   date: timestamp("date").notNull(),
 });
 
@@ -356,7 +356,7 @@ export type InsertScenario = typeof scenarios.$inferInsert;
 export const extraRepayments = pgTable("extra_repayments", {
   id: serial("id").primaryKey(),
   loanId: integer("loanId").notNull().references(() => loans.id, { onDelete: 'cascade' }),
-  amount: integer("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   frequency: frequencyEnum("frequency").notNull(),
   startDate: timestamp("startDate").notNull(),
   endDate: timestamp("endDate"),
@@ -368,7 +368,7 @@ export type InsertExtraRepayment = typeof extraRepayments.$inferInsert;
 export const lumpSumPayments = pgTable("lump_sum_payments", {
   id: serial("id").primaryKey(),
   loanId: integer("loanId").notNull().references(() => loans.id, { onDelete: 'cascade' }),
-  amount: integer("amount").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   paymentDate: timestamp("paymentDate").notNull(),
 });
 
@@ -381,7 +381,7 @@ export const interestRateForecasts = pgTable("interest_rate_forecasts", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   startYear: integer("startYear").notNull(),
   endYear: integer("endYear"),
-  forecastRate: integer("forecastRate").notNull(),
+  forecastRate: numeric("forecastRate", { precision: 5, scale: 2 }).notNull(),
 });
 
 export type InterestRateForecast = typeof interestRateForecasts.$inferSelect;

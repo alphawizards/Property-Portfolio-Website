@@ -28,7 +28,14 @@ export default function PropertyDetail() {
     }
   };
 
-  const formatCurrency = (cents: number) => {
+  const safeParse = (val: any) => {
+    if (typeof val === 'number') return val;
+    const parsed = parseFloat(val);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const formatCurrency = (centsInput: number | string) => {
+    const cents = safeParse(centsInput);
     return `$${(cents / 100).toLocaleString()}`;
   };
 

@@ -18,8 +18,9 @@ export default function Properties() {
       (p) => p.nickname.toLowerCase().includes(searchQuery.toLowerCase()) || p.address.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
-  const formatCurrency = (cents: number) => {
-    return `$${(cents / 100).toLocaleString()}`;
+  const formatCurrency = (cents: number | string) => {
+    const val = typeof cents === 'string' ? parseFloat(cents) : cents;
+    return `$${(val / 100).toLocaleString()}`;
   };
 
   const formatDate = (date: Date) => {
