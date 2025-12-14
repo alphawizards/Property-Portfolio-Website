@@ -38,10 +38,6 @@ import {
   InsertLoanScenario,
   scenarios,
   InsertScenario,
-  assets,
-  InsertAsset,
-  liabilities,
-  InsertLiability,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env"; // We will create this
 import * as mock from "./mock-data";
@@ -78,7 +74,7 @@ export const db = globalForDb.conn ?? drizzle(client, { schema });
 if (process.env.NODE_ENV !== "production") globalForDb.conn = db;
 
 // Helper to check if mock mode is active
-export const isMock = () => process.env.ENABLE_MOCK_DATA === "true";
+const isMock = () => process.env.ENABLE_MOCK_DATA === "true";
 
 // ============ USER OPERATIONS ============
 
@@ -614,67 +610,6 @@ export async function saveLoanScenario(scenario: InsertLoanScenario) {
   if (isMock()) return 999;
   const result = await db.insert(loanScenarios).values(scenario).returning({ id: loanScenarios.id });
   return Number(result[0].id);
-}
-
-// ============ WIZARD HELPER ============
-
-export async function createPropertyFromWizard(data: any) { // Type 'any' for now to avoid circular deps, or import schema type
-  if (isMock()) return 999;
-
-  return await db.transaction(async (tx) => {
-    // 1. Create Property
-    const [property] = await tx.insert(properties).values({
-      userId: data.userId,
-      nickname: data.nickname,
-      address: data.address,
-      state: data.state,
-      suburb: data.suburb,
-      propertyType: "Residential", // Default for now
-      ownershipStructure: "Individual", // Default, could infer from owners
-      purchaseDate: data.purchaseDate,
-      purchasePrice: data.purchasePrice,
-      status: data.scenarioId ? "Projected" : "Actual",
-      scenarioId: data.scenarioId ?? null,
-    }).returning({ id: properties.id });
-    const propertyId = Number(property.id);
-
-    // 2. Add Owners
-    if (data.owners && data.owners.length > 0) {
-      await tx.insert(propertyOwnership).values(data.owners.map((o: any) => ({
-        propertyId,
-        ownerName: o.name,
-        percentage: o.percentage
-      })));
-    }
-
-    // 3. Add Usage Period (Initial)
-    await tx.insert(propertyUsagePeriods).values({
-      propertyId,
-      startDate: data.purchaseDate,
-      usageType: data.usageType
-    });
-
-    // 4. Add Initial Valuation (at Purchase Price)
-    await tx.insert(propertyValuations).values({
-      propertyId,
-      valuationDate: data.purchaseDate,
-      value: data.purchasePrice
-    });
-
-    // 5. Add Purchase Costs (Optional)
-    if (data.stampDuty || data.legalFee || data.otherCosts) {
-      await tx.insert(purchaseCosts).values({
-        propertyId,
-        stampDuty: data.stampDuty ?? 0,
-        legalFee: data.legalFee ?? 0,
-        otherCosts: data.otherCosts ?? 0,
-        agentFee: 0,
-        inspectionFee: 0
-      });
-    }
-
-    return propertyId;
-  });
 }
 
 export async function getLoanScenariosByProperty(propertyId: number) {

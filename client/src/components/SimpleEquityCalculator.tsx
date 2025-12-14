@@ -1,24 +1,15 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ArrowRight, CheckCircle2, Calculator } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { trackEvent } from '@/lib/analytics';
 
 export function SimpleEquityCalculator() {
     const [, setLocation] = useLocation();
     const [propertyValue, setPropertyValue] = useState<number | ''>('');
     const [loanBalance, setLoanBalance] = useState<number | ''>('');
-    const [hasTrackedUsage, setHasTrackedUsage] = useState(false);
-
-    useEffect(() => {
-        if (!hasTrackedUsage && (propertyValue !== '' || loanBalance !== '')) {
-            trackEvent('calculator_used');
-            setHasTrackedUsage(true);
-        }
-    }, [propertyValue, loanBalance, hasTrackedUsage]);
 
     const usableEquity = useMemo(() => {
         if (typeof propertyValue !== 'number' || typeof loanBalance !== 'number') return 0;
@@ -30,7 +21,6 @@ export function SimpleEquityCalculator() {
     const hasDeployableEquity = usableEquity > 50000;
 
     const handleGenPlan = () => {
-        trackEvent('calculator_cta_clicked', { equity: usableEquity });
         setLocation('/signup?intent=equity_plan');
     };
 
