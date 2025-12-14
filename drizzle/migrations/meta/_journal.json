@@ -15,13 +15,6 @@
       "when": 1765409602844,
       "tag": "0001_heavy_mojo",
       "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1765603502148,
-      "tag": "0002_pink_magik",
-      "breakpoints": true
     }
   ]
 }

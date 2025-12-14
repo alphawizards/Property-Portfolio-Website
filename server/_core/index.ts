@@ -37,6 +37,31 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // Rate Limiting
+  const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "Too many requests, please try again later.",
+  });
+
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 5, // Strict limit for auth routes
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // CORS Configuration
+  app.use(cors({
+    origin: ENV.NODE_ENV === "production" ? process.env.APP_URL : true,
+    credentials: true,
+  }));
+
+  // Apply general limiter to all API routes
+  app.use("/api", generalLimiter);
+
   // Stripe webhook MUST be registered BEFORE express.json() for signature verification
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
 
@@ -58,10 +83,6 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
-      onError: ({ path, error }) => {
-        console.error(`❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`);
-        console.error(error);
-      },
     })
   );
 
