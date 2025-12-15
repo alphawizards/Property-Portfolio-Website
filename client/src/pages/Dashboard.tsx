@@ -10,11 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, Plus, PieChart, Building2, TrendingUp, ArrowUpRight, Calculator, Trash2, DollarSign } from "lucide-react";
+import { Target, Plus, PieChart, Building2, TrendingUp, ArrowUpRight, Calculator, Trash2, DollarSign, Wallet } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useScenario } from "@/contexts/ScenarioContext";
 import { formatCurrency } from "@/lib/utils";
 import { ProjectionsTable } from "@/components/projections-table";
+
+function calculateUsableEquity(propertyValue: number, totalDebt: number): number {
+  return Math.max(0, (propertyValue * 0.80) - totalDebt);
+}
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -97,10 +101,13 @@ export default function Dashboard() {
       totalValue: acc.totalValue + prop.currentValue,
       totalDebt: acc.totalDebt + prop.totalDebt,
       totalEquity: acc.totalEquity + prop.equity,
+      totalUsableEquity: acc.totalUsableEquity + calculateUsableEquity(prop.currentValue, prop.totalDebt),
       propertyCount: acc.propertyCount + 1,
     }),
-    { totalValue: 0, totalDebt: 0, totalEquity: 0, propertyCount: 0 }
-  ) || { totalValue: 0, totalDebt: 0, totalEquity: 0, propertyCount: 0 };
+    { totalValue: 0, totalDebt: 0, totalEquity: 0, totalUsableEquity: 0, propertyCount: 0 }
+  ) || { totalValue: 0, totalDebt: 0, totalEquity: 0, totalUsableEquity: 0, propertyCount: 0 };
+
+  const portfolioLVR = filteredSummary.totalValue > 0 ? (filteredSummary.totalDebt / filteredSummary.totalValue) * 100 : 0;
 
   // Prepare chart data - filter by selected property if applicable
   const chartData = selectedPropertyId === "all"
@@ -240,8 +247,29 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="font-mono text-2xl font-bold text-fintech-growth">{formatCurrency(filteredSummary.totalEquity)}</div>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-muted-foreground">
+                      {((filteredSummary.totalEquity / filteredSummary.totalValue) * 100).toFixed(1)}% of total value
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Usable Equity</CardTitle>
+                  <Wallet className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="font-mono text-2xl font-bold text-blue-600">{formatCurrency(filteredSummary.totalUsableEquity)}</div>
                   <p className="text-xs text-muted-foreground">
-                    {((filteredSummary.totalEquity / filteredSummary.totalValue) * 100).toFixed(1)}% of total value
+                    Available at 80% LVR
                   </p>
                 </CardContent>
               </Card>
@@ -254,14 +282,18 @@ export default function Dashboard() {
             >
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Debt</CardTitle>
+                  <CardTitle className="text-sm font-medium">Total Debt (LVR)</CardTitle>
                   <Calculator className="h-4 w-4 text-fintech-debt" />
                 </CardHeader>
                 <CardContent>
                   <div className="font-mono text-2xl font-bold text-fintech-debt">{formatCurrency(filteredSummary.totalDebt)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Avg. LVR {((filteredSummary.totalDebt / filteredSummary.totalValue) * 100).toFixed(1)}%
-                  </p>
+                  <div className={`text-xs font-medium px-2 py-0.5 rounded-full inline-block mt-1 ${
+                      portfolioLVR < 80 ? 'bg-green-100 text-green-800' :
+                      portfolioLVR < 85 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                    LVR {portfolioLVR.toFixed(2)}%
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>

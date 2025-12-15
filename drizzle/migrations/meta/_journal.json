@@ -15,6 +15,13 @@
       "when": 1765409602844,
       "tag": "0001_heavy_mojo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765773091541,
+      "tag": "0002_sharp_stature",
+      "breakpoints": true
     }
   ]
 }
