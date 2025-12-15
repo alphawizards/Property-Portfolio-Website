@@ -412,3 +412,16 @@ export const feedback = pgTable("feedback", {
 
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = typeof feedback.$inferInsert;
+
+export const propertyDrafts = pgTable("property_drafts", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  portfolioId: integer("portfolioId").references(() => portfolios.id, { onDelete: 'cascade' }),
+  step: integer("step").notNull().default(1),
+  data: text("data").notNull(), // JSON string of the form state
+  propertyNickname: varchar("propertyNickname", { length: 255 }),
+  lastSavedAt: timestamp("lastSavedAt").defaultNow(),
+});
+
+export type PropertyDraft = typeof propertyDrafts.$inferSelect;
+export type InsertPropertyDraft = typeof propertyDrafts.$inferInsert;

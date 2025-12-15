@@ -11,6 +11,7 @@ import { featureGatesRouter } from "./routers/feature-gates-router";
 import { adminRouter } from "./routers/admin-router";
 import { feedbackRouter } from "./routers/feedback-router";
 import { authRouter } from "./routers/auth-router";
+import { propertyDraftRouter } from "./routers/property-draft-router";
 import { toDecimal, Decimal } from "../shared/decimal-utils";
 import {
   portfolioSchema,
@@ -38,6 +39,7 @@ export const appRouter = router({
   admin: adminRouter,
   feedback: feedbackRouter,
   auth: authRouter,
+  propertyDraft: propertyDraftRouter,
   // ============ PORTFOLIO OPERATIONS ============
   portfolios: router({
     list: protectedProcedure.query(async ({ ctx }) => {
