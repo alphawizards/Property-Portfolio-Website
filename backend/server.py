@@ -117,6 +117,26 @@ async def get_status_checks():
     
     return status_checks
 
+
+# ============================================================
+# TEST ENDPOINTS - Demonstrate error handling (can be removed in production)
+# ============================================================
+
+@api_router.get("/test/500")
+async def test_500_error():
+    """Test endpoint that triggers an unhandled exception (500 error)"""
+    raise Exception("This is a simulated internal server error")
+
+
+@api_router.get("/test/validation")
+async def test_validation_error(age: int):
+    """
+    Test endpoint for validation errors (422).
+    Call without 'age' parameter or with invalid type to trigger validation error.
+    Example: /api/test/validation?age=abc
+    """
+    return {"age": age, "message": "Validation successful"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
