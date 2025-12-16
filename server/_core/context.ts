@@ -4,19 +4,20 @@ import type { User } from "../../drizzle/schema";
 import { sessions, users } from "@clerk/clerk-sdk-node";
 import * as db from "../db";
 
-// Common context interface
+// Common context interface - ADDED: db property
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"] | Request;
   res?: CreateExpressContextOptions["res"];
   user: any | null;
+  db: typeof db; // ADDED: database connection
 };
 
 // Logic to extract token from various request types
 function getToken(req: any): string | undefined {
   // 1. Authorization Header
   const authHeader = req.headers.authorization || req.headers.get?.("authorization");
-  if (authHeader && typeof authHeader === 'string') {
-    return authHeader.replace('Bearer ', '');
+  if (authHeader && typeof authHeader === "string") {
+    return authHeader.replace("Bearer ", "");
   }
 
   // 2. Cookie
@@ -27,7 +28,7 @@ function getToken(req: any): string | undefined {
 
   // Standard Request: parse Cookie header
   const cookieHeader = req.headers.cookie || req.headers.get?.("cookie");
-  if (cookieHeader && typeof cookieHeader === 'string') {
+  if (cookieHeader && typeof cookieHeader === "string") {
     const match = cookieHeader.match(/__session=([^;]+)/);
     return match ? match[1] : undefined;
   }
@@ -60,8 +61,8 @@ async function getUserFromRequest(req: any) {
             openId: session.userId,
             email: email,
             name: `${clerkUser.firstName} ${clerkUser.lastName}`,
-            role: 'user',
-            loginMethod: 'clerk'
+            role: "user",
+            loginMethod: "clerk",
           });
           user = await db.getUserByOpenId(session.userId);
         }
@@ -93,12 +94,12 @@ async function getUserFromRequest(req: any) {
 export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
   const { req, res } = opts;
   const user = await getUserFromRequest(req);
-  return { req, res, user };
+  return { req, res, user, db }; // ADDED: db to context
 }
 
 // For Fetch (Vercel Edge/Serverless)
 export async function createFetchContext(opts: FetchCreateContextFnOptions): Promise<TrpcContext> {
   const { req, resHeaders } = opts;
   const user = await getUserFromRequest(req);
-  return { req, user };
+  return { req, user, db }; // ADDED: db to context
 }
