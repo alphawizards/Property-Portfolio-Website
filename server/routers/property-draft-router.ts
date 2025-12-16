@@ -1,4 +1,3 @@
-
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { propertyDrafts } from "../../drizzle/schema";
@@ -17,10 +16,10 @@ export const propertyDraftRouter = router({
       // Check if draft exists
       const existingDraft = await ctx.db.query.propertyDrafts.findFirst({
         where: and(
-            eq(propertyDrafts.userId, ctx.userId),
+            eq(propertyDrafts.userId, ctx.user.id),
             // We assume one draft per user per portfolio for now, or just per user if portfolio not strict
             // But let's check by userId only for simplicity as per implementation guide
-            eq(propertyDrafts.userId, ctx.userId)
+            eq(propertyDrafts.userId, ctx.user.id)
         ),
       });
 
@@ -36,7 +35,7 @@ export const propertyDraftRouter = router({
           .where(eq(propertyDrafts.id, existingDraft.id));
       } else {
         await ctx.db.insert(propertyDrafts).values({
-          userId: ctx.userId,
+          userId: ctx.user.id,
           // portfolioId: ctx.portfolioId, // We need to get portfolio ID from context or input if multiple portfolios supported
           step: input.currentStep,
           data: JSON.stringify(input.draftData),
@@ -47,7 +46,7 @@ export const propertyDraftRouter = router({
 
   getDraft: protectedProcedure.query(async ({ ctx }) => {
     const draft = await ctx.db.query.propertyDrafts.findFirst({
-      where: eq(propertyDrafts.userId, ctx.userId),
+      where: eq(propertyDrafts.userId, ctx.user.id),
     });
 
     if (!draft) return null;
@@ -61,6 +60,6 @@ export const propertyDraftRouter = router({
   deleteDraft: protectedProcedure.mutation(async ({ ctx }) => {
     await ctx.db
       .delete(propertyDrafts)
-      .where(eq(propertyDrafts.userId, ctx.userId));
+      .where(eq(propertyDrafts.userId, ctx.user.id));
   }),
 });
