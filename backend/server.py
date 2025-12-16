@@ -28,6 +28,48 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
+# ============================================================
+# GLOBAL ERROR HANDLERS - Ensure JSON-only responses
+# ============================================================
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Handle Pydantic validation errors (422).
+    Returns a clean JSON structure instead of the default detailed error list.
+    """
+    logger.error(f"Validation error on {request.url}: {exc.errors()}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "code": "VALIDATION_ERROR",
+            "message": "Request validation failed.",
+            "details": exc.errors() if os.environ.get('DEBUG', 'false').lower() == 'true' else None
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all handler for unhandled exceptions (500 errors).
+    Ensures the server NEVER returns HTML, only JSON.
+    """
+    logger.error(f"Unhandled exception on {request.url}: {str(exc)}", exc_info=True)
+    
+    # Return structured JSON response
+    return JSONResponse(
+        status_code=500,
+        content={
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": "An internal server error occurred.",
+            # Only include stack trace in development mode
+            "details": str(exc) if os.environ.get('DEBUG', 'false').lower() == 'true' else None
+        }
+    )
+
+
 # Define Models
 class StatusCheck(BaseModel):
     model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
